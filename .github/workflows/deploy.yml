@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prd
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          # 1. Navigate to project directory (Adjust path as needed)
+          mkdir -p ~/troca-ai
+          cd ~/troca-ai
+
+          # 2. Pull latest changes (Using git or rsync if not a git repo on server)
+          # Assuming the server has the repo cloned already. If not, you might need to clone first.
+          # Ideally: git pull origin main
+          # For simplicity in this script, let's assume we maintain the state via git on the server.
+          
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/${{ github.repository }}.git .
+          fi
+
+          git pull origin main
+
+          # 3. Create .env file from Secrets
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+          
+          # 4. Build and Run
+          docker compose up -d --build
+
+          # 5. Cleanup
+          docker image prune -f

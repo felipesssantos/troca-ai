@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    container_name: troca-ai-app
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      # AWS SDK credentials are not needed in runtime environment for client-side apps,
+      # but if you have server-side logic (e.g. Next.js), you would need them.
+      # Since this is a Vite SPA, env vars are baked into the build or provided at runtime if using a specialized entrypoint.
+      # For Vite, standard practice is build-time replacing. 
+      # HOWEVER, to support runtime config without rebuilding, we'd need a config.js strategy.
+      # For MVP simplicity, we assume env vars are present during BUILD (Step 1).
+      # If building on server, we need these vars present in the .env file on the server.
