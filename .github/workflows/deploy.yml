@@ -40,7 +40,11 @@ jobs:
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
           
           # 4. Build and Run
-          docker compose up -d --build
+          if command -v docker-compose &> /dev/null; then
+            docker-compose up -d --build
+          else
+            docker compose up -d --build
+          fi
 
           # 5. Cleanup
           docker image prune -f
