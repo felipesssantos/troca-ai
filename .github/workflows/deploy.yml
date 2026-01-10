@@ -20,6 +20,9 @@ jobs:
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
+          # Add set -e to stop script execution on error
+          set -e
+
           # 1. Navigate to project directory (Adjust path as needed)
           mkdir -p ~/troca-ai
           cd ~/troca-ai
