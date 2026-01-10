@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import { Button } from '@/components/ui/button'
+// import { Button } from '@/components/ui/button'
 // import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -94,52 +94,13 @@ export default function Album() {
         return list
     }
 
-    const [pendingTradesCount, setPendingTradesCount] = useState(0)
 
-    useEffect(() => {
-        if (!user) return
-        const fetchTradesCount = async () => {
-            const { count } = await supabase
-                .from('trades')
-                .select('*', { count: 'exact', head: true })
-                .eq('receiver_id', user.id)
-                .eq('status', 'pending')
-            setPendingTradesCount(count || 0)
-        }
-        fetchTradesCount()
-
-        // Subscribe to new trades (Realtime)
-        const channel = supabase
-            .channel('public:trades')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades', filter: `receiver_id=eq.${user.id}` },
-                () => setPendingTradesCount(prev => prev + 1)
-            )
-            .subscribe()
-
-        return () => { supabase.removeChannel(channel) }
-    }, [user])
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header Stats */}
-            <div className="bg-white shadow-sm sticky top-0 z-10 p-4">
-                <div className="max-w-4xl mx-auto flex flex-col gap-4">
-                    <div className="flex justify-between items-center">
-                        <h1 className="text-xl font-bold text-gray-800">Copa 2026 🇧🇷</h1>
-                        <div className="flex gap-2">
-                            <Button variant="default" size="sm" onClick={() => window.location.href = '/trades'} className="relative">
-                                📩 Propostas
-                                {pendingTradesCount > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce">
-                                        {pendingTradesCount}
-                                    </span>
-                                )}
-                            </Button>
-                            <Button variant="secondary" size="sm" onClick={() => window.location.href = '/community'}>Comunidade</Button>
-                            <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>Sair</Button>
-                        </div>
-                    </div>
-                </div>
+            <div className="max-w-4xl mx-auto pt-4 px-4">
+                {/* Stats Panel */}
 
                 <div className="flex gap-4 text-sm justify-between bg-gray-100 p-3 rounded-lg">
                     <div className="text-center">

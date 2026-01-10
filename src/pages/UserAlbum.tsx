@@ -153,8 +153,8 @@ export default function UserAlbum() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white shadow-sm sticky top-0 z-10 p-4">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="max-w-4xl mx-auto p-4 pb-0">
+                <div className="flex items-center justify-between">
                     <Button variant="ghost" onClick={() => navigate('/community')}>← Voltar</Button>
                     {targetUser && (
                         <div className="flex items-center gap-3">

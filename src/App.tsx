@@ -8,6 +8,7 @@ import Album from '@/pages/Album'
 import Community from '@/pages/Community'
 import UserAlbum from '@/pages/UserAlbum'
 import Trades from '@/pages/Trades'
+import Header from '@/components/Header'
 
 function AlbumWrapper() {
   const { user } = useAuthStore()
@@ -45,7 +46,14 @@ function AlbumWrapper() {
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
   if (!session) return <Navigate to="/auth" replace />
-  return <>{children}</>
+  return (
+    <>
+      <Header />
+      <div className="pt-4">
+        {children}
+      </div>
+    </>
+  )
 }
 
 function App() {
