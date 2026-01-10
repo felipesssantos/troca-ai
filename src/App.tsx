@@ -5,6 +5,9 @@ import { useAuthStore } from '@/store/authStore'
 import AuthPage from '@/pages/Auth'
 import ProfileSetup from '@/pages/ProfileSetup'
 import Album from '@/pages/Album'
+import Community from '@/pages/Community'
+import UserAlbum from '@/pages/UserAlbum'
+import Trades from '@/pages/Trades'
 
 function AlbumWrapper() {
   const { user } = useAuthStore()
@@ -89,6 +92,30 @@ function App() {
           element={
             <PrivateRoute>
               <AlbumWrapper />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/community"
+          element={
+            <PrivateRoute>
+              <Community />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/user/:username"
+          element={
+            <PrivateRoute>
+              <UserAlbum />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/trades"
+          element={
+            <PrivateRoute>
+              <Trades />
             </PrivateRoute>
           }
         />

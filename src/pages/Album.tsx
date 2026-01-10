@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 // import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-const TOTAL_STICKERS = 670
+const TOTAL_STICKERS = 980
 
 interface StickerData {
     sticker_number: number
@@ -94,6 +94,31 @@ export default function Album() {
         return list
     }
 
+    const [pendingTradesCount, setPendingTradesCount] = useState(0)
+
+    useEffect(() => {
+        if (!user) return
+        const fetchTradesCount = async () => {
+            const { count } = await supabase
+                .from('trades')
+                .select('*', { count: 'exact', head: true })
+                .eq('receiver_id', user.id)
+                .eq('status', 'pending')
+            setPendingTradesCount(count || 0)
+        }
+        fetchTradesCount()
+
+        // Subscribe to new trades (Realtime)
+        const channel = supabase
+            .channel('public:trades')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades', filter: `receiver_id=eq.${user.id}` },
+                () => setPendingTradesCount(prev => prev + 1)
+            )
+            .subscribe()
+
+        return () => { supabase.removeChannel(channel) }
+    }, [user])
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header Stats */}
@@ -101,49 +126,61 @@ export default function Album() {
                 <div className="max-w-4xl mx-auto flex flex-col gap-4">
                     <div className="flex justify-between items-center">
                         <h1 className="text-xl font-bold text-gray-800">Copa 2026 🇧🇷</h1>
-                        <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>Sair</Button>
-                    </div>
-
-                    <div className="flex gap-4 text-sm justify-between bg-gray-100 p-3 rounded-lg">
-                        <div className="text-center">
-                            <div className="font-bold text-green-600">{totalOwned}</div>
-                            <div className="text-xs text-gray-500">Tenho</div>
+                        <div className="flex gap-2">
+                            <Button variant="default" size="sm" onClick={() => window.location.href = '/trades'} className="relative">
+                                📩 Propostas
+                                {pendingTradesCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce">
+                                        {pendingTradesCount}
+                                    </span>
+                                )}
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => window.location.href = '/community'}>Comunidade</Button>
+                            <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>Sair</Button>
                         </div>
-                        <div className="text-center">
-                            <div className="font-bold text-blue-600">{totalRepeated}</div>
-                            <div className="text-xs text-gray-500">Repetidas</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="font-bold text-gray-700">{percentage}%</div>
-                            <div className="text-xs text-gray-500">Completo</div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                        <Badge
-                            variant={filter === 'all' ? 'default' : 'outline'}
-                            onClick={() => setFilter('all')}
-                            className="cursor-pointer"
-                        >
-                            Todas
-                        </Badge>
-                        <Badge
-                            variant={filter === 'missing' ? 'default' : 'outline'}
-                            onClick={() => setFilter('missing')}
-                            className="cursor-pointer"
-                        >
-                            Faltam ({TOTAL_STICKERS - totalOwned})
-                        </Badge>
-                        <Badge
-                            variant={filter === 'repeated' ? 'default' : 'outline'}
-                            onClick={() => setFilter('repeated')}
-                            className="cursor-pointer"
-                        >
-                            Repetidas
-                        </Badge>
                     </div>
                 </div>
+
+                <div className="flex gap-4 text-sm justify-between bg-gray-100 p-3 rounded-lg">
+                    <div className="text-center">
+                        <div className="font-bold text-green-600">{totalOwned}</div>
+                        <div className="text-xs text-gray-500">Tenho</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="font-bold text-blue-600">{totalRepeated}</div>
+                        <div className="text-xs text-gray-500">Repetidas</div>
+                    </div>
+                    <div className="text-center">
+                        <div className="font-bold text-gray-700">{percentage}%</div>
+                        <div className="text-xs text-gray-500">Completo</div>
+                    </div>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                    <Badge
+                        variant={filter === 'all' ? 'default' : 'outline'}
+                        onClick={() => setFilter('all')}
+                        className="cursor-pointer"
+                    >
+                        Todas
+                    </Badge>
+                    <Badge
+                        variant={filter === 'missing' ? 'default' : 'outline'}
+                        onClick={() => setFilter('missing')}
+                        className="cursor-pointer"
+                    >
+                        Faltam ({TOTAL_STICKERS - totalOwned})
+                    </Badge>
+                    <Badge
+                        variant={filter === 'repeated' ? 'default' : 'outline'}
+                        onClick={() => setFilter('repeated')}
+                        className="cursor-pointer"
+                    >
+                        Repetidas ({totalRepeated})
+                    </Badge>
+                </div>
             </div>
+
 
             {/* Grid */}
             <div className="max-w-4xl mx-auto p-4">
@@ -177,6 +214,6 @@ export default function Album() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }
