@@ -40,9 +40,12 @@ jobs:
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
           
           # 4. Build and Run
-          if command -v docker-compose &> /dev/null; then
+          # Check for docker-compose V1 (standard) vs docker compose V2 (plugin)
+          if command -v docker-compose >/dev/null 2>&1; then
+            echo "Found docker-compose (V1). Executing..."
             docker-compose up -d --build
           else
+            echo "docker-compose not found. Trying 'docker compose' (V2)..."
             docker compose up -d --build
           fi
 
