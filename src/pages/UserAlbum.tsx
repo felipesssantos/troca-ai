@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+
 
 const TOTAL_STICKERS = 670 // or 980, checking consistency
 
@@ -32,7 +32,7 @@ export default function UserAlbum() {
 
     const [targetUser, setTargetUser] = useState<Profile | null>(null)
     const [stickers, setStickers] = useState<Record<number, number>>({}) // Target user's stickers
-    const [myStickers, setMyStickers] = useState<Record<number, number>>({}) // My stickers from selected album
+
     const [loading, setLoading] = useState(true)
 
     // Trade Proposal State
@@ -115,7 +115,7 @@ export default function UserAlbum() {
 
                 const myMap: Record<number, number> = {}
                 myStickersData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
-                setMyStickers(myMap)
+
 
                 // D. Get Locked Stickers (Pending Trades)
                 const { data: pendingTrades } = await supabase
