@@ -39,15 +39,27 @@ jobs:
           echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
           
-          # 4. Build and Run
-          # Check for docker-compose V1 (standard) vs docker compose V2 (plugin)
-          if command -v docker-compose >/dev/null 2>&1; then
-            echo "Found docker-compose (V1). Executing..."
-            docker-compose up -d --build
-          else
-            echo "docker-compose not found. Trying 'docker compose' (V2)..."
-            docker compose up -d --build
-          fi
+          # 4. Build and Run (Using raw Docker to avoid Compose dependency)
+          # Load secrets into shell variables for build args
+          export VITE_SUPABASE_URL="${{ secrets.VITE_SUPABASE_URL }}"
+          export VITE_SUPABASE_ANON_KEY="${{ secrets.VITE_SUPABASE_ANON_KEY }}"
+
+          echo "Building Docker Image..."
+          docker build \
+            --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
+            -t troca-ai-app .
+
+          echo "Stopping old container..."
+          docker stop troca-ai-app || true
+          docker rm troca-ai-app || true
+
+          echo "Starting new container..."
+          docker run -d \
+            --name troca-ai-app \
+            -p 80:80 \
+            --restart always \
+            troca-ai-app
 
           # 5. Cleanup
           docker image prune -f
