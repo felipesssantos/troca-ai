@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+// import { Badge } from '@/components/ui/badge'
 
 const TOTAL_STICKERS = 980
 
@@ -27,7 +27,7 @@ export default function UserAlbum() {
 
     const [targetUser, setTargetUser] = useState<Profile | null>(null)
     const [targetStickers, setTargetStickers] = useState<Record<number, number>>({})
-    const [myStickers, setMyStickers] = useState<Record<number, number>>({})
+    // const [myStickers, setMyStickers] = useState<Record<number, number>>({})
     const [loading, setLoading] = useState(true)
 
     const [potentialGive, setPotentialGive] = useState<number[]>([])
@@ -73,7 +73,7 @@ export default function UserAlbum() {
 
                 const myMap: Record<number, number> = {}
                 myData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
-                setMyStickers(myMap)
+                // setMyStickers(myMap)
 
                 // 4. Get Locked Stickers (Pending Trades)
                 const { data: pendingTrades } = await supabase
