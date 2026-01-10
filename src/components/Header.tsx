@@ -64,7 +64,7 @@ export default function Header() {
             <div className="max-w-4xl mx-auto flex flex-col gap-4">
                 <div className="flex justify-between items-center">
                     <h1 className="text-xl font-bold text-gray-800 cursor-pointer" onClick={() => navigate('/')}>
-                        Copa 2026 🇧🇷
+                        Troca.ai ⚽
                     </h1>
                     <div className="flex gap-2 items-center">
                         <Button variant="default" size="sm" onClick={() => navigate('/trades')} className="relative mr-2">

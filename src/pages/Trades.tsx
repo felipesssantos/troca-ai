@@ -64,39 +64,64 @@ export default function Trades() {
         // Subscribe to changes (simplified for now: just refresh on action)
     }, [user])
 
-    const handleUpdateStatus = async (tradeId: string, newStatus: 'accepted' | 'rejected') => {
-        if (newStatus === 'accepted') {
-            const confirmAccept = confirm("Ao aceitar, as figurinhas serão trocadas automaticamente. Confirmar?")
-            if (!confirmAccept) return
+    // Acceptance State
+    const [myAlbums, setMyAlbums] = useState<{ id: string, nickname: string | null, template: { name: string } }[]>([])
+    const [tradeToAccept, setTradeToAccept] = useState<string | null>(null) // ID of trade being accepted
+    const [destinationAlbumId, setDestinationAlbumId] = useState<string>('')
+    const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false)
 
+    useEffect(() => {
+        if (!user) return
+        supabase.from('user_albums').select('id, nickname, template:albums(name)').eq('user_id', user.id)
+            .then(({ data }) => {
+                if (data) {
+                    setMyAlbums(data as any)
+                    if (data.length > 0) setDestinationAlbumId(data[0].id)
+                }
+            })
+    }, [user])
+
+    const initiateAccept = (tradeId: string) => {
+        setTradeToAccept(tradeId)
+        setIsAcceptDialogOpen(true)
+    }
+
+    const confirmAccept = async () => {
+        if (!tradeToAccept || !destinationAlbumId) return
+
+        try {
             // Call Procedure to Execute Trade
-            const { error } = await supabase.rpc('execute_trade', { p_trade_id: tradeId })
+            const { error } = await supabase.rpc('execute_trade', {
+                p_trade_id: tradeToAccept,
+                p_receiver_album_id: destinationAlbumId
+            })
 
-            if (error) {
-                alert('Erro ao processar troca: ' + error.message)
-                console.error(error)
-                return
-            }
+            if (error) throw error
 
             alert('Troca realizada com sucesso! Seus álbuns foram atualizados.')
-            // Update state to show as Accepted instead of removing
-            setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: 'accepted' } : t))
+            setTrades(prev => prev.map(t => t.id === tradeToAccept ? { ...t, status: 'accepted' } : t))
+            setIsAcceptDialogOpen(false)
+            setTradeToAccept(null)
 
+        } catch (error: any) {
+            alert('Erro ao processar troca: ' + error.message)
+            console.error(error)
+        }
+    }
+
+    const handleReject = async (tradeId: string) => {
+        if (!confirm("Tem certeza que deseja rejeitar esta proposta?")) return
+
+        const { error } = await supabase
+            .from('trades')
+            .update({ status: 'rejected' })
+            .eq('id', tradeId)
+
+        if (error) {
+            console.error(error)
+            alert('Erro ao rejeitar.')
         } else {
-            // Reject Logic
-            if (!confirm("Tem certeza que deseja rejeitar esta proposta?")) return
-
-            const { error } = await supabase
-                .from('trades')
-                .update({ status: 'rejected' })
-                .eq('id', tradeId)
-
-            if (error) {
-                console.error(error)
-                alert('Erro ao rejeitar.')
-            } else {
-                setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: 'rejected' } : t))
-            }
+            setTrades(prev => prev.map(t => t.id === tradeId ? { ...t, status: 'rejected' } : t))
         }
     }
 
@@ -201,8 +226,8 @@ export default function Trades() {
                                 <CardFooter className="flex justify-end gap-2 pt-0">
                                     {activeTab === 'received' && trade.status === 'pending' && (
                                         <>
-                                            <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(trade.id, 'rejected')}>Rejeitar</Button>
-                                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(trade.id, 'accepted')}>Aceitar</Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleReject(trade.id)}>Rejeitar</Button>
+                                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => initiateAccept(trade.id)}>Aceitar</Button>
                                         </>
                                     )}
                                     {activeTab === 'sent' && trade.status === 'pending' && (
@@ -213,7 +238,42 @@ export default function Trades() {
                         ))}
                     </div>
                 )}
+
             </div>
+
+            {/* Accept Modal */}
+            {isAcceptDialogOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-sm">
+                        <h3 className="text-lg font-bold mb-4">Aceitar Troca</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Em qual álbum você deseja colar as figurinhas recebidas?
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500">Álbum de Destino:</label>
+                                <select
+                                    className="w-full border rounded p-2 mt-1"
+                                    value={destinationAlbumId}
+                                    onChange={(e) => setDestinationAlbumId(e.target.value)}
+                                >
+                                    {myAlbums.map(a => (
+                                        <option key={a.id} value={a.id}>
+                                            {a.nickname || a.template.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button variant="outline" className="flex-1" onClick={() => setIsAcceptDialogOpen(false)}>Cancelar</Button>
+                                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={confirmAccept}>Confirmar</Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -12,15 +12,21 @@ interface StickerData {
     count: number
 }
 
+// Custom imports
+import { useParams } from 'react-router-dom'
+
+// ... (existing imports)
+
 export default function Album() {
     const { user } = useAuthStore()
+    const { albumId } = useParams()
     const [stickers, setStickers] = useState<Record<number, number>>({})
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<'all' | 'missing' | 'repeated'>('all')
 
     // Load initial data
     useEffect(() => {
-        if (!user) return
+        if (!user || !albumId) return
 
         const fetchStickers = async () => {
             setLoading(true)
@@ -28,6 +34,7 @@ export default function Album() {
                 .from('user_stickers')
                 .select('sticker_number, count')
                 .eq('user_id', user.id)
+                .eq('user_album_id', albumId)
 
             if (error) {
                 console.error('Error fetching stickers:', error)
@@ -42,11 +49,11 @@ export default function Album() {
         }
 
         fetchStickers()
-    }, [user])
+    }, [user, albumId])
 
     // Handle interactions
     const updateStickerCount = async (num: number, increment: boolean) => {
-        if (!user) return
+        if (!user || !albumId) return
 
         const currentCount = stickers[num] || 0
         let newCount = increment ? currentCount + 1 : currentCount - 1
@@ -61,9 +68,10 @@ export default function Album() {
             .from('user_stickers')
             .upsert({
                 user_id: user.id,
+                user_album_id: albumId,
                 sticker_number: num,
                 count: newCount
-            }, { onConflict: 'user_id, sticker_number' })
+            }, { onConflict: 'user_album_id, sticker_number' })
 
         if (error) {
             console.error('Error saving sticker:', error)

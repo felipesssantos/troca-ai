@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import AuthPage from '@/pages/Auth'
@@ -8,40 +8,10 @@ import Album from '@/pages/Album'
 import Community from '@/pages/Community'
 import UserAlbum from '@/pages/UserAlbum'
 import Trades from '@/pages/Trades'
+import Dashboard from '@/pages/Dashboard'
 import Header from '@/components/Header'
 
-function AlbumWrapper() {
-  const { user } = useAuthStore()
-  const navigate = useNavigate()
-  const [checkingProfile, setCheckingProfile] = useState(true)
 
-  useEffect(() => {
-    if (!user) return
-
-    const checkProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
-
-        if (error || !data?.username) {
-          navigate('/profile/setup')
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setCheckingProfile(false)
-      }
-    }
-    checkProfile()
-  }, [user, navigate])
-
-  if (checkingProfile) return <div className="flex h-screen items-center justify-center">Verificando álbum...</div>
-
-  return <Album />
-}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
@@ -99,7 +69,15 @@ function App() {
           path="/"
           element={
             <PrivateRoute>
-              <AlbumWrapper />
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/album/:albumId"
+          element={
+            <PrivateRoute>
+              <Album />
             </PrivateRoute>
           }
         />

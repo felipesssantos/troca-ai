@@ -5,9 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-// import { Badge } from '@/components/ui/badge'
 
-const TOTAL_STICKERS = 980
+const TOTAL_STICKERS = 670 // or 980, checking consistency
 
 interface StickerData {
     sticker_number: number
@@ -20,28 +19,59 @@ interface Profile {
     avatar_url: string
 }
 
+interface MyAlbum {
+    id: string
+    nickname: string | null
+    template: { name: string }
+}
+
 export default function UserAlbum() {
     const { username } = useParams()
     const { user: currentUser } = useAuthStore()
     const navigate = useNavigate()
 
     const [targetUser, setTargetUser] = useState<Profile | null>(null)
-    const [targetStickers, setTargetStickers] = useState<Record<number, number>>({})
-    // const [myStickers, setMyStickers] = useState<Record<number, number>>({})
+    const [stickers, setStickers] = useState<Record<number, number>>({}) // Target user's stickers
+    const [myStickers, setMyStickers] = useState<Record<number, number>>({}) // My stickers from selected album
     const [loading, setLoading] = useState(true)
 
+    // Trade Proposal State
+    const [giving, setGiving] = useState<number[]>([]) // Stickers I give
+    const [receiving, setReceiving] = useState<number[]>([]) // Stickers I get (dupes they have, I need)
+
+    // Potentials (for UI highlights)
     const [potentialGive, setPotentialGive] = useState<number[]>([])
     const [potentialReceive, setPotentialReceive] = useState<number[]>([])
-    const [selectedGive, setSelectedGive] = useState<number[]>([])
-    const [selectedReceive, setSelectedReceive] = useState<number[]>([])
 
+    // Multi-Album State
+    const [myAlbums, setMyAlbums] = useState<MyAlbum[]>([])
+    const [selectedAlbumId, setSelectedAlbumId] = useState<string>('')
+
+    // 1. Fetch My Albums
     useEffect(() => {
-        if (!username || !currentUser) return
+        if (!currentUser) return
+        const fetchMyAlbums = async () => {
+            const { data } = await supabase
+                .from('user_albums')
+                .select('id, nickname, template:albums(name)')
+                .eq('user_id', currentUser.id)
 
-        const loadData = async () => {
+            if (data && data.length > 0) {
+                setMyAlbums(data as any)
+                setSelectedAlbumId(data[0].id) // Default to first
+            }
+        }
+        fetchMyAlbums()
+    }, [currentUser])
+
+    // 2. Main Data Fetching
+    useEffect(() => {
+        if (!username || !currentUser || !selectedAlbumId) return // Wait for album selection
+
+        const fetchData = async () => {
             setLoading(true)
             try {
-                // 1. Get Target User ID
+                // A. Get Target User ID
                 const { data: profileData, error: profileError } = await supabase
                     .from('profiles')
                     .select('id, username, avatar_url')
@@ -55,55 +85,70 @@ export default function UserAlbum() {
                 }
                 setTargetUser(profileData)
 
-                // 2. Get Target User Stickers
-                const { data: targetData } = await supabase
-                    .from('user_stickers')
-                    .select('sticker_number, count')
+                // B. Fetch THEIR stickers (from THEIR first/main album)
+                const { data: theirAlbum } = await supabase
+                    .from('user_albums')
+                    .select('id')
                     .eq('user_id', profileData.id)
+                    .limit(1)
+                    .single()
 
-                const targetMap: Record<number, number> = {}
-                targetData?.forEach((s: StickerData) => targetMap[s.sticker_number] = s.count)
-                setTargetStickers(targetMap)
+                const theirMap: Record<number, number> = {}
 
-                // 3. Get My Stickers (for Comparison)
-                const { data: myData } = await supabase
+                if (theirAlbum) {
+                    const { data: theirStickers } = await supabase
+                        .from('user_stickers')
+                        .select('sticker_number, count')
+                        .eq('user_id', profileData.id)
+                        .eq('user_album_id', theirAlbum.id) // Filter by THEIR album
+
+                    theirStickers?.forEach((s: StickerData) => theirMap[s.sticker_number] = s.count)
+                }
+                setStickers(theirMap)
+
+                // C. Fetch MY stickers (from SELECTED album)
+                const { data: myStickersData } = await supabase
                     .from('user_stickers')
                     .select('sticker_number, count')
                     .eq('user_id', currentUser.id)
+                    .eq('user_album_id', selectedAlbumId) // Filter by MY selected album
 
                 const myMap: Record<number, number> = {}
-                myData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
-                // setMyStickers(myMap)
+                myStickersData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
+                setMyStickers(myMap)
 
-                // 4. Get Locked Stickers (Pending Trades)
+                // D. Get Locked Stickers (Pending Trades)
                 const { data: pendingTrades } = await supabase
                     .from('trades')
                     .select('offer_stickers')
                     .eq('sender_id', currentUser.id)
                     .eq('status', 'pending')
+                    .eq('sender_album_id', selectedAlbumId) // Only lock stickers from this specific album
 
                 const lockedSet = new Set<number>()
                 pendingTrades?.forEach(t => {
                     (t.offer_stickers as number[]).forEach(n => lockedSet.add(n))
                 })
 
-                // CALCULATE MATCHES
-                const give = Object.keys(myMap).filter(n => {
+                // E. Calculate Matches
+                // Can Give: I have duplicate (>1), they need (==0), not locked
+                const pGive = Object.keys(myMap).filter(n => {
                     const num = Number(n)
-                    // Must have dupe AND target needs it AND it's not locked in another trade
-                    return (myMap[num] > 1) && (!targetMap[num]) && (!lockedSet.has(num))
+                    return (myMap[num] > 1) && (!theirMap[num]) && (!lockedSet.has(num))
                 }).map(Number)
 
-                const receive = Object.keys(targetMap).filter(n => {
+                // Can Receive: They have duplicate (>1), I need (==0)
+                const pReceive = Object.keys(theirMap).filter(n => {
                     const num = Number(n)
-                    return (targetMap[num] > 1) && (!myMap[num])
+                    return (theirMap[num] > 1) && (!myMap[num])
                 }).map(Number)
 
-                setPotentialGive(give)
-                setPotentialReceive(receive)
-                // Default: Select ALL
-                setSelectedGive(give)
-                setSelectedReceive(receive)
+                setPotentialGive(pGive)
+                setPotentialReceive(pReceive)
+
+                // Auto-select all available matches
+                setGiving(pGive)
+                setReceiving(pReceive)
 
             } catch (error) {
                 console.error(error)
@@ -111,71 +156,87 @@ export default function UserAlbum() {
                 setLoading(false)
             }
         }
-        loadData()
-    }, [username, currentUser, navigate])
+        fetchData()
+    }, [username, currentUser, navigate, selectedAlbumId])
 
+
+    // Handlers
     const toggleGive = (num: number) => {
-        setSelectedGive(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
+        setGiving(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
     }
 
     const toggleReceive = (num: number) => {
-        setSelectedReceive(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
+        setReceiving(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
     }
 
     const handleProposeTrade = async () => {
-        if (!currentUser || !targetUser) return
+        if (!currentUser || !targetUser || !selectedAlbumId) return
+        if (giving.length === 0 && receiving.length === 0) return
 
         if (!confirm('Deseja realmente enviar essa proposta de troca?')) return
 
         setLoading(true)
-        const { error } = await supabase
-            .from('trades')
-            .insert({
-                sender_id: currentUser.id,
-                receiver_id: targetUser.id,
-                offer_stickers: selectedGive,
-                request_stickers: selectedReceive,
-                status: 'pending'
-            })
+        try {
+            const { error } = await supabase
+                .from('trades')
+                .insert({
+                    sender_id: currentUser.id,
+                    receiver_id: targetUser.id,
+                    offer_stickers: giving,
+                    request_stickers: receiving,
+                    status: 'pending',
+                    sender_album_id: selectedAlbumId // Save MY source album
+                })
 
-        setLoading(false)
+            if (error) throw error
 
-        if (error) {
-            console.error(error)
-            alert('Erro ao enviar proposta.')
-        } else {
             alert('Proposta enviada com sucesso! 🚀')
-            // Optional: Redirect to a "My Trades" page
             navigate('/community')
+        } catch (e: any) {
+            console.error(e)
+            alert('Erro ao enviar proposta: ' + e.message)
+        } finally {
+            setLoading(false)
         }
     }
 
-
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="max-w-4xl mx-auto p-4 pb-0">
-                <div className="flex items-center justify-between">
-                    <Button variant="ghost" onClick={() => navigate('/community')}>← Voltar</Button>
-                    {targetUser && (
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-lg">@{targetUser.username}</span>
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={targetUser.avatar_url} />
-                                <AvatarFallback>{targetUser.username[0]}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                    )}
+            {/* 1. Navbar / Header */}
+            <div className="bg-white border-b py-2 px-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>← Voltar</Button>
+                    <span className="font-bold">@{targetUser?.username}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 hidden sm:inline">Comparar com:</span>
+                    <select
+                        className="text-sm border rounded p-1 max-w-[150px]"
+                        value={selectedAlbumId}
+                        onChange={(e) => setSelectedAlbumId(e.target.value)}
+                    >
+                        {myAlbums.map(album => (
+                            <option key={album.id} value={album.id}>
+                                {album.nickname || album.template.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
             <div className="max-w-4xl mx-auto p-4 space-y-6">
 
-                {/* Match Summary Card */}
+                {/* 2. Match Summary Card */}
                 <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
                     <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
+                        <CardTitle className="flex justify-between items-center text-lg">
                             <span>Resumo da Troca</span>
-                            <Button onClick={handleProposeTrade} disabled={selectedGive.length === 0 && selectedReceive.length === 0}>
+                            <Button
+                                onClick={handleProposeTrade}
+                                disabled={giving.length === 0 && receiving.length === 0}
+                                className="bg-indigo-600 hover:bg-indigo-700"
+                            >
                                 Enviar Proposta
                             </Button>
                         </CardTitle>
@@ -183,10 +244,10 @@ export default function UserAlbum() {
                     </CardHeader>
                     <CardContent className="grid md:grid-cols-2 gap-6">
 
-                        {/* RECEIVE SECTION */}
+                        {/* RECEIVE SECTION (Green) */}
                         <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
                             <div className="flex justify-between mb-2">
-                                <h3 className="font-bold text-green-700">Você Recebe ({selectedReceive.length})</h3>
+                                <h3 className="font-bold text-green-700">Você Recebe ({receiving.length})</h3>
                                 <span className="text-xs text-gray-400">Disponíveis: {potentialReceive.length}</span>
                             </div>
                             {potentialReceive.length === 0 ? (
@@ -194,7 +255,7 @@ export default function UserAlbum() {
                             ) : (
                                 <div className="flex flex-wrap gap-1">
                                     {potentialReceive.map(n => {
-                                        const isSelected = selectedReceive.includes(n)
+                                        const isSelected = receiving.includes(n)
                                         return (
                                             <button
                                                 key={n}
@@ -214,10 +275,10 @@ export default function UserAlbum() {
                             )}
                         </div>
 
-                        {/* GIVE SECTION */}
+                        {/* GIVE SECTION (Blue) */}
                         <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
                             <div className="flex justify-between mb-2">
-                                <h3 className="font-bold text-blue-700">Você Dá ({selectedGive.length})</h3>
+                                <h3 className="font-bold text-blue-700">Você Dá ({giving.length})</h3>
                                 <span className="text-xs text-gray-400">Disponíveis: {potentialGive.length}</span>
                             </div>
                             {potentialGive.length === 0 ? (
@@ -225,7 +286,7 @@ export default function UserAlbum() {
                             ) : (
                                 <div className="flex flex-wrap gap-1">
                                     {potentialGive.map(n => {
-                                        const isSelected = selectedGive.includes(n)
+                                        const isSelected = giving.includes(n)
                                         return (
                                             <button
                                                 key={n}
@@ -247,13 +308,13 @@ export default function UserAlbum() {
                     </CardContent>
                 </Card>
 
-                {/* Full Album View (Optional, maybe just showing match is enough for MVP, but let's show grid) */}
+                {/* 3. Full Album View Grid */}
                 <div className="mt-8">
-                    <h3 className="font-bold text-gray-700 mb-4">Álbum de @{targetUser?.username}</h3>
+                    <h3 className="font-bold text-gray-700 mb-4">Álbum de @{targetUser?.username} (Visão Completa)</h3>
                     {loading ? <p>Carregando...</p> : (
                         <div className="grid grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
                             {Array.from({ length: TOTAL_STICKERS }, (_, i) => i + 1).map(num => {
-                                const count = targetStickers[num] || 0
+                                const count = stickers[num] || 0
                                 const isGold = potentialReceive.includes(num) // They have dupe, I need
                                 const isBlue = potentialGive.includes(num) // I have dupe, they need
 
