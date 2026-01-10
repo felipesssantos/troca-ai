@@ -75,10 +75,23 @@ export default function UserAlbum() {
                 myData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
                 setMyStickers(myMap)
 
+                // 4. Get Locked Stickers (Pending Trades)
+                const { data: pendingTrades } = await supabase
+                    .from('trades')
+                    .select('offer_stickers')
+                    .eq('sender_id', currentUser.id)
+                    .eq('status', 'pending')
+
+                const lockedSet = new Set<number>()
+                pendingTrades?.forEach(t => {
+                    (t.offer_stickers as number[]).forEach(n => lockedSet.add(n))
+                })
+
                 // CALCULATE MATCHES
                 const give = Object.keys(myMap).filter(n => {
                     const num = Number(n)
-                    return (myMap[num] > 1) && (!targetMap[num])
+                    // Must have dupe AND target needs it AND it's not locked in another trade
+                    return (myMap[num] > 1) && (!targetMap[num]) && (!lockedSet.has(num))
                 }).map(Number)
 
                 const receive = Object.keys(targetMap).filter(n => {
