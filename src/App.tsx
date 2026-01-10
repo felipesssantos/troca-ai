@@ -27,7 +27,7 @@ function AlbumWrapper() {
           .single()
 
         if (error || !data?.username) {
-          navigate('/profile-setup')
+          navigate('/profile/setup')
         }
       } catch (e) {
         console.error(e)
@@ -88,7 +88,7 @@ function App() {
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route
-          path="/profile-setup"
+          path="/profile/setup"
           element={
             <PrivateRoute>
               <ProfileSetup />

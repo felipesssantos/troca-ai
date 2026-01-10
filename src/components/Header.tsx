@@ -3,14 +3,36 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function Header() {
     const { user } = useAuthStore()
     const navigate = useNavigate()
     const [pendingTradesCount, setPendingTradesCount] = useState(0)
+    const [profile, setProfile] = useState<{ username: string, avatar_url: string } | null>(null)
 
     useEffect(() => {
         if (!user) return
+
+        // Fetch Profile for Avatar
+        const fetchProfile = async () => {
+            const { data } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('id', user.id)
+                .single()
+            if (data) setProfile(data)
+        }
+        fetchProfile()
+
         const fetchTradesCount = async () => {
             const { count } = await supabase
                 .from('trades')
@@ -44,8 +66,8 @@ export default function Header() {
                     <h1 className="text-xl font-bold text-gray-800 cursor-pointer" onClick={() => navigate('/')}>
                         Copa 2026 🇧🇷
                     </h1>
-                    <div className="flex gap-2">
-                        <Button variant="default" size="sm" onClick={() => navigate('/trades')} className="relative">
+                    <div className="flex gap-2 items-center">
+                        <Button variant="default" size="sm" onClick={() => navigate('/trades')} className="relative mr-2">
                             📩 Propostas
                             {pendingTradesCount > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce">
@@ -53,8 +75,35 @@ export default function Header() {
                                 </span>
                             )}
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={() => navigate('/community')}>Comunidade</Button>
-                        <Button variant="outline" size="sm" onClick={handleLogout}>Sair</Button>
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/community')} className="mr-2">Comunidade</Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={profile?.avatar_url} alt={profile?.username} />
+                                        <AvatarFallback>{profile?.username?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">{profile?.username}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            {user?.email}
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => navigate('/profile/setup')}>
+                                    👤 Editar Perfil
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                                    🚪 Sair
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>

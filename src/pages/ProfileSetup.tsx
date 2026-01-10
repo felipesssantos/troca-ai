@@ -14,6 +14,10 @@ export default function ProfileSetup() {
     const navigate = useNavigate()
 
     const [username, setUsername] = useState('')
+    const [phone, setPhone] = useState('')
+    const [city, setCity] = useState('')
+    const [state, setState] = useState('')
+
     const [file, setFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -24,15 +28,16 @@ export default function ProfileSetup() {
             const fetchProfile = async () => {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('username, avatar_url')
+                    .select('username, avatar_url, phone, city, state')
                     .eq('id', user.id)
                     .single()
 
-                if (data?.username) {
-                    setUsername(data.username)
-                }
-                if (data?.avatar_url) {
-                    setPreviewUrl(data.avatar_url)
+                if (data) {
+                    if (data.username) setUsername(data.username)
+                    if (data.avatar_url) setPreviewUrl(data.avatar_url)
+                    if (data.phone) setPhone(data.phone)
+                    if (data.city) setCity(data.city)
+                    if (data.state) setState(data.state)
                 }
             }
             fetchProfile()
@@ -53,11 +58,24 @@ export default function ProfileSetup() {
         setLoading(true)
 
         try {
+            // 0. Validate Username Uniqueness
+            const { data: existingUser } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .neq('id', user.id) // Exclude current user
+                .single()
+
+            if (existingUser) {
+                alert('Este nome de usuário já está em uso. Por favor, escolha outro.')
+                setLoading(false)
+                return
+            }
+
             let avatarUrl = previewUrl
 
             if (file) {
                 const fileName = `avatars/${user.id}/${Date.now()}-${file.name}`
-
                 // Use the new helper that uses AWS SDK v3
                 avatarUrl = await uploadFile(file, fileName)
             }
@@ -68,6 +86,9 @@ export default function ProfileSetup() {
                 .upsert({
                     id: user.id,
                     username,
+                    phone,
+                    city,
+                    state,
                     avatar_url: avatarUrl,
                     updated_at: new Date().toISOString(),
                 })
@@ -116,6 +137,38 @@ export default function ProfileSetup() {
                                 required
                                 minLength={3}
                             />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                            <Input
+                                id="phone"
+                                placeholder="(11) 99999-9999"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="city">Cidade</Label>
+                                <Input
+                                    id="city"
+                                    placeholder="São Paulo"
+                                    value={city}
+                                    onChange={(e) => setCity(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="state">Estado (UF)</Label>
+                                <Input
+                                    id="state"
+                                    placeholder="SP"
+                                    maxLength={2}
+                                    value={state}
+                                    onChange={(e) => setState(e.target.value.toUpperCase())}
+                                />
+                            </div>
                         </div>
 
                         <Button type="submit" className="w-full" disabled={loading}>
