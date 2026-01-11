@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
-const endpoint = import.meta.env.VITE_MINIO_ENDPOINT
+const rawEndpoint = import.meta.env.VITE_MINIO_ENDPOINT
+// Ensure protocol is present (AWS SDK and URL constructor require it)
+const endpoint = rawEndpoint.startsWith('http') ? rawEndpoint : `http://${rawEndpoint}`
 const accessKeyId = import.meta.env.VITE_MINIO_ACCESS_KEY
 const secretAccessKey = import.meta.env.VITE_MINIO_SECRET_KEY
 
