@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 const rawEndpoint = import.meta.env.VITE_MINIO_ENDPOINT
 // Ensure protocol is present (AWS SDK and URL constructor require it)
@@ -42,5 +42,29 @@ export const uploadFile = async (file: File, fileName: string) => {
     } catch (err) {
         console.error('Upload Error', err)
         throw err
+    }
+}
+
+export const deleteFileFromUrl = async (fileUrl: string) => {
+    try {
+        // Extract Key from URL
+        // Expected format: http://endpoint/bucket-name/KEY
+        // We split by bucket name to be safe
+        const parts = fileUrl.split(`${BUCKET_NAME}/`)
+        if (parts.length < 2) return // Not a file in our bucket or malformed URL
+
+        const key = parts[1] // "avatars/..."
+
+        console.log('Deleting old avatar:', key)
+
+        const command = new DeleteObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+        })
+
+        await s3Client.send(command)
+    } catch (err) {
+        console.error('Delete Error (Non-fatal)', err)
+        // We don't throw here to avoid blocking the user flow if deletion fails
     }
 }

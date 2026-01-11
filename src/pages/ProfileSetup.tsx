@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { uploadFile } from '@/lib/minio'
+import { uploadFile, deleteFileFromUrl } from '@/lib/minio'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +21,7 @@ export default function ProfileSetup() {
     const [file, setFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
 
     useEffect(() => {
         if (user) {
@@ -34,7 +35,10 @@ export default function ProfileSetup() {
 
                 if (data) {
                     if (data.username) setUsername(data.username)
-                    if (data.avatar_url) setPreviewUrl(data.avatar_url)
+                    if (data.avatar_url) {
+                        setPreviewUrl(data.avatar_url)
+                        setCurrentAvatarUrl(data.avatar_url)
+                    }
                     if (data.phone) setPhone(data.phone)
                     if (data.city) setCity(data.city)
                     if (data.state) setState(data.state)
@@ -75,6 +79,11 @@ export default function ProfileSetup() {
             let avatarUrl = previewUrl
 
             if (file) {
+                // If there was an old avatar, try to delete it
+                if (currentAvatarUrl) {
+                    await deleteFileFromUrl(currentAvatarUrl)
+                }
+
                 const fileName = `avatars/${user.id}/${Date.now()}-${file.name}`
                 // Use the new helper that uses AWS SDK v3
                 avatarUrl = await uploadFile(file, fileName)
