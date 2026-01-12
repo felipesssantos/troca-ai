@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 // import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-const TOTAL_STICKERS = 980
+// Removed hardcoded TOTAL_STICKERS
 
 interface StickerData {
     sticker_number: number
@@ -22,14 +22,29 @@ export default function Album() {
     const { albumId } = useParams()
     const [stickers, setStickers] = useState<Record<number, number>>({})
     const [loading, setLoading] = useState(true)
+    const [totalStickers, setTotalStickers] = useState(670) // Default fallback
     const [filter, setFilter] = useState<'all' | 'missing' | 'repeated'>('all')
 
     // Load initial data
     useEffect(() => {
         if (!user || !albumId) return
 
-        const fetchStickers = async () => {
+        const fetchData = async () => {
             setLoading(true)
+
+            // 1. Get Album Info (Total Stickers)
+            const { data: albumData } = await supabase
+                .from('user_albums')
+                .select('album_template_id, albums(total_stickers)')
+                .eq('id', albumId)
+                .single()
+
+            if (albumData?.albums) {
+                // @ts-ignore
+                setTotalStickers(albumData.albums.total_stickers)
+            }
+
+            // 2. Get User Stickers
             const { data, error } = await supabase
                 .from('user_stickers')
                 .select('sticker_number, count')
@@ -48,7 +63,7 @@ export default function Album() {
             setLoading(false)
         }
 
-        fetchStickers()
+        fetchData()
     }, [user, albumId])
 
     // Handle interactions
@@ -91,11 +106,11 @@ export default function Album() {
     // Calculate stats
     const totalOwned = Object.values(stickers).filter(c => c > 0).length
     const totalRepeated = Object.values(stickers).filter(c => c > 1).reduce((acc, c) => acc + (c - 1), 0)
-    const percentage = Math.round((totalOwned / TOTAL_STICKERS) * 100)
+    const percentage = totalStickers > 0 ? Math.round((totalOwned / totalStickers) * 100) : 0
 
     // Filter Logic
     const getVisibleStickers = () => {
-        const list = Array.from({ length: TOTAL_STICKERS }, (_, i) => i + 1)
+        const list = Array.from({ length: totalStickers }, (_, i) => i + 1)
         if (filter === 'all') return list
         if (filter === 'missing') return list.filter(n => !stickers[n])
         if (filter === 'repeated') return list.filter(n => (stickers[n] || 0) > 1)
@@ -138,7 +153,7 @@ export default function Album() {
                         onClick={() => setFilter('missing')}
                         className="cursor-pointer"
                     >
-                        Faltam ({TOTAL_STICKERS - totalOwned})
+                        Faltam ({totalStickers - totalOwned})
                     </Badge>
                     <Badge
                         variant={filter === 'repeated' ? 'default' : 'outline'}

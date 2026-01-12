@@ -223,8 +223,14 @@ export default function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="relative w-full h-32 bg-gradient-to-br from-yellow-100 to-green-100 rounded-md flex items-center justify-center overflow-hidden">
-                                    <span className="text-4xl">⚽</span>
+                                <div className="relative w-full h-32 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                                    {album.template.cover_image ? (
+                                        <img src={album.template.cover_image} alt={album.template.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-yellow-100 to-green-100 flex items-center justify-center">
+                                            <span className="text-4xl">⚽</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="mt-4 flex justify-between text-sm text-gray-600">
                                     <span>{album.template.total_stickers} figurinhas</span>

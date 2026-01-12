@@ -11,7 +11,13 @@ import Trades from '@/pages/Trades'
 import Dashboard from '@/pages/Dashboard'
 import Header from '@/components/Header'
 
-
+// Admin Imports
+import AdminRoute from './components/AdminRoute'
+import AdminLayout from './layouts/AdminLayout'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminAlbums from './pages/admin/AdminAlbums'
+import AdminAlbumForm from './pages/admin/AdminAlbumForm'
+import AdminUsers from './pages/admin/AdminUsers'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
@@ -65,6 +71,18 @@ function App() {
             </PrivateRoute>
           }
         />
+        {/* Admin Area */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="albums" element={<AdminAlbums />} />
+            <Route path="albums/new" element={<AdminAlbumForm />} />
+            <Route path="albums/edit/:id" element={<AdminAlbumForm />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+        </Route>
+
+        {/* User Area */}
         <Route
           path="/"
           element={

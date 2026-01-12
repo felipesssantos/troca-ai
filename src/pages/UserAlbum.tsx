@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 
-const TOTAL_STICKERS = 670 // or 980, checking consistency
+// Hardcoded TOTAL_STICKERS removed
 
 interface StickerData {
     sticker_number: number
@@ -34,6 +34,7 @@ export default function UserAlbum() {
     const [stickers, setStickers] = useState<Record<number, number>>({}) // Target user's stickers
 
     const [loading, setLoading] = useState(true)
+    const [totalStickers, setTotalStickers] = useState(670) // Default fallback
 
     // Trade Proposal State
     const [giving, setGiving] = useState<number[]>([]) // Stickers I give
@@ -43,9 +44,10 @@ export default function UserAlbum() {
     const [potentialGive, setPotentialGive] = useState<number[]>([])
     const [potentialReceive, setPotentialReceive] = useState<number[]>([])
 
-    // Multi-Album State
     const [myAlbums, setMyAlbums] = useState<MyAlbum[]>([])
     const [selectedAlbumId, setSelectedAlbumId] = useState<string>('')
+    const [targetUserAlbums, setTargetUserAlbums] = useState<{ id: string, nickname: string | null }[]>([])
+    const [selectedTargetAlbumId, setSelectedTargetAlbumId] = useState<string>('')
 
     // 1. Fetch My Albums
     useEffect(() => {
@@ -70,6 +72,12 @@ export default function UserAlbum() {
 
         const fetchData = async () => {
             setLoading(true)
+            setStickers({}) // Reset previous
+            setPotentialGive([])
+            setPotentialReceive([])
+            setGiving([])
+            setReceiving([])
+
             try {
                 // A. Get Target User ID
                 const { data: profileData, error: profileError } = await supabase
@@ -85,52 +93,88 @@ export default function UserAlbum() {
                 }
                 setTargetUser(profileData)
 
-                // B. Fetch THEIR stickers (from THEIR first/main album)
-                const { data: theirAlbum } = await supabase
+                // B. Get MY Selected Album Template info
+                const { data: myAlbumData } = await supabase
                     .from('user_albums')
-                    .select('id')
-                    .eq('user_id', profileData.id)
-                    .limit(1)
+                    .select('album_template_id, albums(total_stickers)')
+                    .eq('id', selectedAlbumId)
                     .single()
 
-                const theirMap: Record<number, number> = {}
+                if (!myAlbumData) return
 
-                if (theirAlbum) {
+                // @ts-ignore
+                const currentTemplateId = myAlbumData.album_template_id
+                // @ts-ignore
+                const albumTotal = myAlbumData.albums?.total_stickers || 670
+
+                setTotalStickers(albumTotal) // Update dynamic total
+
+                // C. Find THEIR matching albums (Same Template)
+                const { data: theirAlbumsData } = await supabase
+                    .from('user_albums')
+                    .select('id, nickname')
+                    .eq('user_id', profileData.id)
+                    .eq('album_template_id', currentTemplateId)
+
+                if (!theirAlbumsData || theirAlbumsData.length === 0) {
+                    setTargetUserAlbums([])
+                    setSelectedTargetAlbumId('')
+                    setStickers({})
+                    setLoading(false)
+                    return
+                }
+
+                // @ts-ignore
+                setTargetUserAlbums(theirAlbumsData)
+
+                // Select first one if none selected or if selected is not in the list
+                let targetId = selectedTargetAlbumId
+                // @ts-ignore
+                const validIds = theirAlbumsData.map(a => a.id)
+                if (!targetId || !validIds.includes(targetId)) {
+                    // @ts-ignore
+                    targetId = theirAlbumsData[0].id
+                    setSelectedTargetAlbumId(targetId)
+                }
+
+                // D. Fetch THEIR stickers (from THEIR matching album)
+                const theirMap: Record<number, number> = {}
+                if (targetId) {
                     const { data: theirStickers } = await supabase
                         .from('user_stickers')
                         .select('sticker_number, count')
                         .eq('user_id', profileData.id)
-                        .eq('user_album_id', theirAlbum.id) // Filter by THEIR album
+                        .eq('user_album_id', targetId)
 
                     theirStickers?.forEach((s: StickerData) => theirMap[s.sticker_number] = s.count)
+                    setStickers(theirMap)
                 }
-                setStickers(theirMap)
 
-                // C. Fetch MY stickers (from SELECTED album)
+                // E. Fetch MY stickers (from SELECTED album)
                 const { data: myStickersData } = await supabase
                     .from('user_stickers')
                     .select('sticker_number, count')
                     .eq('user_id', currentUser.id)
-                    .eq('user_album_id', selectedAlbumId) // Filter by MY selected album
+                    .eq('user_album_id', selectedAlbumId)
 
                 const myMap: Record<number, number> = {}
                 myStickersData?.forEach((s: StickerData) => myMap[s.sticker_number] = s.count)
 
 
-                // D. Get Locked Stickers (Pending Trades)
+                // F. Get Locked Stickers (Pending Trades)
                 const { data: pendingTrades } = await supabase
                     .from('trades')
                     .select('offer_stickers')
                     .eq('sender_id', currentUser.id)
                     .eq('status', 'pending')
-                    .eq('sender_album_id', selectedAlbumId) // Only lock stickers from this specific album
+                    .eq('sender_album_id', selectedAlbumId)
 
                 const lockedSet = new Set<number>()
                 pendingTrades?.forEach(t => {
                     (t.offer_stickers as number[]).forEach(n => lockedSet.add(n))
                 })
 
-                // E. Calculate Matches
+                // G. Calculate Matches
                 // Can Give: I have duplicate (>1), they need (==0), not locked
                 const pGive = Object.keys(myMap).filter(n => {
                     const num = Number(n)
@@ -157,7 +201,7 @@ export default function UserAlbum() {
             }
         }
         fetchData()
-    }, [username, currentUser, navigate, selectedAlbumId])
+    }, [username, currentUser, navigate, selectedAlbumId, selectedTargetAlbumId])
 
 
     // Handlers
@@ -210,7 +254,7 @@ export default function UserAlbum() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 hidden sm:inline">Comparar com:</span>
+                    <span className="text-xs text-gray-500 hidden sm:inline">Meus Álbuns:</span>
                     <select
                         className="text-sm border rounded p-1 max-w-[150px]"
                         value={selectedAlbumId}
@@ -218,10 +262,27 @@ export default function UserAlbum() {
                     >
                         {myAlbums.map(album => (
                             <option key={album.id} value={album.id}>
-                                {album.nickname || album.template.name}
+                                {album.template.name}{album.nickname ? ` (${album.nickname})` : ''}
                             </option>
                         ))}
                     </select>
+
+                    {targetUserAlbums.length > 1 && (
+                        <>
+                            <span className="text-xs text-gray-500 hidden sm:inline ml-2">Álbum dele(a):</span>
+                            <select
+                                className="text-sm border rounded p-1 max-w-[150px]"
+                                value={selectedTargetAlbumId}
+                                onChange={(e) => setSelectedTargetAlbumId(e.target.value)}
+                            >
+                                {targetUserAlbums.map((album: any) => (
+                                    <option key={album.id} value={album.id}>
+                                        {album.nickname || `Álbum ${album.id.slice(0, 4)}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -313,7 +374,7 @@ export default function UserAlbum() {
                     <h3 className="font-bold text-gray-700 mb-4">Álbum de @{targetUser?.username} (Visão Completa)</h3>
                     {loading ? <p>Carregando...</p> : (
                         <div className="grid grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
-                            {Array.from({ length: TOTAL_STICKERS }, (_, i) => i + 1).map(num => {
+                            {Array.from({ length: totalStickers }, (_, i) => i + 1).map(num => {
                                 const count = stickers[num] || 0
                                 const isGold = potentialReceive.includes(num) // They have dupe, I need
                                 const isBlue = potentialGive.includes(num) // I have dupe, they need

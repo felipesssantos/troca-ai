@@ -18,6 +18,12 @@ interface Trade {
         username: string
         avatar_url: string
     }
+    sender_album?: {
+        album_template_id: string
+        template: {
+            name: string
+        }
+    }
 }
 
 export default function Trades() {
@@ -37,14 +43,14 @@ export default function Trades() {
             // Fetch RECEIVED trades
             const { data: receivedData } = await supabase
                 .from('trades')
-                .select(`*, sender:sender_id(username, avatar_url)`)
+                .select(`*, sender:sender_id(username, avatar_url), sender_album:sender_album_id(album_template_id, template:albums(name))`)
                 .eq('receiver_id', user.id)
                 .order('created_at', { ascending: false })
 
             // Fetch SENT trades
             const { data: sentData } = await supabase
                 .from('trades')
-                .select(`*, receiver:receiver_id(username, avatar_url)`)
+                .select(`*, receiver:receiver_id(username, avatar_url), sender_album:sender_album_id(template:albums(name))`)
                 .eq('sender_id', user.id)
                 .order('created_at', { ascending: false })
 
@@ -65,24 +71,33 @@ export default function Trades() {
     }, [user])
 
     // Acceptance State
-    const [myAlbums, setMyAlbums] = useState<{ id: string, nickname: string | null, template: { name: string } }[]>([])
+    const [myAlbums, setMyAlbums] = useState<{ id: string, nickname: string | null, template: { name: string }, album_template_id: string }[]>([])
     const [tradeToAccept, setTradeToAccept] = useState<string | null>(null) // ID of trade being accepted
     const [destinationAlbumId, setDestinationAlbumId] = useState<string>('')
     const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false)
 
     useEffect(() => {
         if (!user) return
-        supabase.from('user_albums').select('id, nickname, template:albums(name)').eq('user_id', user.id)
+        supabase.from('user_albums').select('id, nickname, template:albums(name), album_template_id').eq('user_id', user.id)
             .then(({ data }) => {
                 if (data) {
                     setMyAlbums(data as any)
-                    if (data.length > 0) setDestinationAlbumId(data[0].id)
+                    // Don't set default destination yet, depends on the trade
                 }
             })
     }, [user])
 
-    const initiateAccept = (tradeId: string) => {
-        setTradeToAccept(tradeId)
+    const initiateAccept = (trade: Trade) => {
+        setTradeToAccept(trade.id)
+
+        // Auto-select the first matching album
+        const templateId = trade.sender_album?.album_template_id
+        if (templateId) {
+            const match = myAlbums.find(a => a.album_template_id === templateId)
+            if (match) setDestinationAlbumId(match.id)
+            else setDestinationAlbumId('') // No matching album found (should warn user)
+        }
+
         setIsAcceptDialogOpen(true)
     }
 
@@ -204,6 +219,9 @@ export default function Trades() {
                                             {trade.status === 'pending' ? 'Pendente' : trade.status === 'accepted' ? 'Aceita' : trade.status === 'cancelled' ? 'Cancelada' : 'Rejeitada'}
                                         </Badge>
                                     </div>
+                                    <div className="text-xs text-gray-400 mt-1 pl-10">
+                                        Referente ao álbum: <span className="font-semibold text-gray-600">{trade.sender_album?.template?.name || 'Desconhecido'}</span>
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="bg-red-50 p-2 rounded border border-red-100">
@@ -227,7 +245,7 @@ export default function Trades() {
                                     {activeTab === 'received' && trade.status === 'pending' && (
                                         <>
                                             <Button variant="destructive" size="sm" onClick={() => handleReject(trade.id)}>Rejeitar</Button>
-                                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => initiateAccept(trade.id)}>Aceitar</Button>
+                                            <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => initiateAccept(trade)}>Aceitar</Button>
                                         </>
                                     )}
                                     {activeTab === 'sent' && trade.status === 'pending' && (
@@ -258,11 +276,18 @@ export default function Trades() {
                                     value={destinationAlbumId}
                                     onChange={(e) => setDestinationAlbumId(e.target.value)}
                                 >
-                                    {myAlbums.map(a => (
-                                        <option key={a.id} value={a.id}>
-                                            {a.nickname || a.template.name}
-                                        </option>
-                                    ))}
+                                    {myAlbums
+                                        .filter(a => {
+                                            // Filter only albums that match the trade template
+                                            if (!tradeToAccept) return true
+                                            const tradeObj = trades.find(t => t.id === tradeToAccept)
+                                            return tradeObj?.sender_album?.album_template_id === a.album_template_id
+                                        })
+                                        .map(a => (
+                                            <option key={a.id} value={a.id}>
+                                                {a.template.name}{a.nickname ? ` (${a.nickname})` : ''}
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
 
