@@ -75,7 +75,7 @@ export default function Header() {
                                 </span>
                             )}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/community')} className="mr-2">Comunidade</Button>
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/community')} className="mr-2">Área de Troca</Button>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

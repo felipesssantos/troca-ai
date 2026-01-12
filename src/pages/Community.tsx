@@ -10,6 +10,8 @@ interface Profile {
     id: string
     username: string
     avatar_url: string
+    city: string | null
+    state: string | null
 }
 
 export default function Community() {
@@ -19,6 +21,8 @@ export default function Community() {
     const [loading, setLoading] = useState(true)
 
     const [searchTerm, setSearchTerm] = useState('')
+    const [cityFilter, setCityFilter] = useState('')
+    const [stateFilter, setStateFilter] = useState('')
 
     useEffect(() => {
         const fetchProfiles = async () => {
@@ -26,7 +30,7 @@ export default function Community() {
             // Fetch all profiles except my own
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, username, avatar_url')
+                .select('id, username, avatar_url, city, state')
                 .neq('id', user?.id || '')
 
             if (error) {
@@ -40,9 +44,13 @@ export default function Community() {
         if (user) fetchProfiles()
     }, [user])
 
-    const filteredProfiles = profiles.filter(profile =>
-        profile.username.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredProfiles = profiles.filter(profile => {
+        const matchesUsername = profile.username.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesCity = cityFilter ? profile.city?.toLowerCase().includes(cityFilter.toLowerCase()) : true
+        const matchesState = stateFilter ? profile.state?.toLowerCase() === stateFilter.toLowerCase() : true
+
+        return matchesUsername && matchesCity && matchesState
+    })
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-20">
@@ -52,14 +60,31 @@ export default function Community() {
                     <Button variant="outline" onClick={() => navigate('/')}>Meu Álbum</Button>
                 </div>
 
-                <div className="relative">
+                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                     <input
                         type="text"
-                        placeholder="Buscar usuário..."
-                        className="w-full p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Buscar usuário (@)..."
+                        className="flex-1 p-2 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    <input
+                        type="text"
+                        placeholder="Cidade"
+                        className="w-full sm:w-32 p-2 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        value={cityFilter}
+                        onChange={(e) => setCityFilter(e.target.value)}
+                    />
+                    <select
+                        className="w-full sm:w-24 p-2 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        value={stateFilter}
+                        onChange={(e) => setStateFilter(e.target.value)}
+                    >
+                        <option value="">UF</option>
+                        {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
+                            <option key={uf} value={uf}>{uf}</option>
+                        ))}
+                    </select>
                 </div>
 
                 {loading ? (
@@ -81,7 +106,14 @@ export default function Community() {
                                     </Avatar>
                                     <div className="flex-1">
                                         <h3 className="font-semibold text-lg">@{profile.username}</h3>
-                                        <p className="text-sm text-gray-500">Ver álbum e trocas</p>
+                                        {(profile.city || profile.state) && (
+                                            <p className="text-xs text-gray-500 mb-1">
+                                                {profile.city ? profile.city : ''}
+                                                {profile.city && profile.state ? ' - ' : ''}
+                                                {profile.state ? profile.state : ''}
+                                            </p>
+                                        )}
+                                        <p className="text-sm text-blue-600 font-medium">Ver álbum e trocas</p>
                                     </div>
                                     <Button size="sm">Ver Trocas</Button>
                                 </CardContent>
