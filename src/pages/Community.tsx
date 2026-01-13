@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { useTour } from '@/hooks/useTour'
 
 interface Profile {
     id: string
@@ -19,6 +20,17 @@ export default function Community() {
     const navigate = useNavigate()
     const [profiles, setProfiles] = useState<Profile[]>([])
     const [loading, setLoading] = useState(true)
+
+    useTour('community', [
+        {
+            element: '#community-grid > div:first-child',
+            popover: { title: 'Colecionadores', description: 'Aqui você encontra outros usuários. Veja quais álbuns eles têm disponíveis.', side: "bottom", align: 'start' }
+        },
+        {
+            element: '#community-grid > div:first-child button',
+            popover: { title: 'Ver Álbuns', description: 'Clique aqui para ver as figurinhas repetidas e faltantes desse usuário.', side: "bottom", align: 'start' }
+        }
+    ])
 
     const [searchTerm, setSearchTerm] = useState('')
     const [cityFilter, setCityFilter] = useState('')

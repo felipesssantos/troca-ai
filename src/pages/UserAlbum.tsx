@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { useTour } from '@/hooks/useTour'
 
 
 // Hardcoded TOTAL_STICKERS removed
@@ -48,6 +49,22 @@ export default function UserAlbum() {
     const [selectedAlbumId, setSelectedAlbumId] = useState<string>('')
     const [targetUserAlbums, setTargetUserAlbums] = useState<{ id: string, nickname: string | null }[]>([])
     const [selectedTargetAlbumId, setSelectedTargetAlbumId] = useState<string>('')
+
+    useTour('album-compare', [
+        {
+            element: '#my-album-select',
+            popover: { title: 'Seu Álbum', description: 'Selecione qual dos seus álbuns você quer usar para comparar e capturar figurinhas.', side: "bottom", align: 'end' }
+        },
+        {
+            element: '#target-album-select',
+            popover: { title: 'Álbum Dele(a)', description: 'Selecione qual álbum desse usuário você quer visualizar.', side: "bottom", align: 'end' }
+        },
+        {
+            // Fallback to body or a known container if grid selector fails, but let's try a broad selector for stickers
+            element: '.grid',
+            popover: { title: 'Figurinhas', description: 'Clique nas figurinhas coloridas para propor uma troca. (Verde = Você precisa, Azul = Você tem repetida).', side: "top", align: 'start' }
+        }
+    ])
 
     // 1. Fetch My Albums
     useEffect(() => {
@@ -258,6 +275,7 @@ export default function UserAlbum() {
                         <div className="flex items-center gap-2 justify-end">
                             <span className="text-xs text-gray-500 whitespace-nowrap">Meu Álbum:</span>
                             <select
+                                id="my-album-select"
                                 className="text-sm border rounded p-1 max-w-[140px] truncate"
                                 value={selectedAlbumId}
                                 onChange={(e) => setSelectedAlbumId(e.target.value)}
@@ -274,6 +292,7 @@ export default function UserAlbum() {
                             <div className="flex items-center gap-2 justify-end">
                                 <span className="text-xs text-gray-500 whitespace-nowrap">Álbum dele(a):</span>
                                 <select
+                                    id="target-album-select"
                                     className="text-sm border rounded p-1 max-w-[140px] truncate"
                                     value={selectedTargetAlbumId}
                                     onChange={(e) => setSelectedTargetAlbumId(e.target.value)}

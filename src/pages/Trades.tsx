@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useTour } from '@/hooks/useTour'
 
 interface Trade {
     id: string
@@ -31,6 +32,17 @@ export default function Trades() {
     const navigate = useNavigate()
     const [trades, setTrades] = useState<Trade[]>([])
     const [loading, setLoading] = useState(true)
+
+    useTour('trades', [
+        {
+            element: '#trades-tabs',
+            popover: { title: 'Abas de Propostas', description: 'Alterne entre propostas que você recebeu e as que você enviou.', side: "bottom", align: 'start' }
+        },
+        {
+            element: '#trades-list > div:first-child',
+            popover: { title: 'Proposta', description: 'Gerencie suas trocas aqui. Aceite, rejeite ou cancele propostas.', side: "top", align: 'start' }
+        }
+    ])
 
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received')
 
@@ -176,7 +188,7 @@ export default function Trades() {
                     <Button variant="outline" onClick={() => navigate('/')}>Voltar</Button>
                 </div>
 
-                <div className="flex gap-2 p-1 bg-gray-200 rounded-lg">
+                <div id="trades-tabs" className="flex gap-2 p-1 bg-gray-200 rounded-lg">
                     <button
                         className={`flex-1 py-1 px-3 rounded-md text-sm font-medium transition-all ${activeTab === 'received' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                         onClick={() => setActiveTab('received')}
@@ -200,7 +212,7 @@ export default function Trades() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-4">
+                    <div id="trades-list" className="grid gap-4">
                         {filteredTrades.map((trade: any) => (
                             <Card key={trade.id} className={`border-l-4 ${trade.status === 'pending' ? 'border-l-yellow-500' : trade.status === 'accepted' ? 'border-l-green-500' : 'border-l-red-500'}`}>
                                 <CardHeader className="pb-2">

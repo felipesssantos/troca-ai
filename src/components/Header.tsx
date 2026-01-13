@@ -10,8 +10,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useTour } from '@/hooks/useTour'
 
 export default function Header() {
     const { user } = useAuthStore()
@@ -19,6 +20,53 @@ export default function Header() {
     const location = useLocation()
     const [pendingTradesCount, setPendingTradesCount] = useState(0)
     const [profile, setProfile] = useState<{ username: string, avatar_url: string } | null>(null)
+
+    useTour('main', [
+        {
+            popover: {
+                title: 'Bem-vindo ao Troca.ai! 🏆',
+                description: 'Sua plataforma definitiva para completar álbuns de figurinhas. Vamos fazer um tour rápido?',
+            }
+        },
+        {
+            element: '#main-header',
+            popover: {
+                title: 'Navegação Principal',
+                description: 'Aqui você acessa suas propostas, a área de troca e seu perfil.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
+            element: 'button[data-tour="community-btn"]',
+            popover: {
+                title: 'Área de Troca',
+                description: 'Encontre outros colecionadores, veja os álbuns deles e inicie negociações.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
+            element: 'button[data-tour="trades-btn"]',
+            popover: {
+                title: 'Suas Propostas',
+                description: 'Gerencie as trocas que você enviou e recebeu. Fique de olho na bolinha de notificações! 🔴🟢',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
+            popover: {
+                title: 'Como Controlar as Figurinhas? 🔢',
+                description: `<div style="font-size: 14px; line-height: 1.6;"><strong>🖱️ No Computador:</strong><br/>• Clique <b>Esquerdo</b>: Adiciona (+1)<br/>• Clique <b>Direito</b>: Remove (-1)<br/><br/><strong>📱 No Celular:</strong><br/>• <b>Toque</b>: Adiciona (+1)<br/>• <b>Segure</b>: Remove (-1)</div>`
+            }
+        },
+        {
+            element: 'button[data-tour="profile-menu"]',
+            popover: {
+                title: 'Seu Perfil',
+                description: 'Mude sua foto e gerencie seus dados aqui.',
+                side: "bottom", align: 'start'
+            }
+        }
+    ])
 
     const isActive = (path: string) => location.pathname === path
 
@@ -63,7 +111,7 @@ export default function Header() {
     }
 
     return (
-        <div className="bg-white shadow-sm sticky top-0 z-50 p-2 sm:p-4">
+        <div id="main-header" className="bg-white shadow-sm sticky top-0 z-50 p-2 sm:p-4">
             <div className="max-w-4xl mx-auto">
                 <div className="flex justify-between items-center sm:gap-4 flex-wrap">
                     <div className="cursor-pointer" onClick={() => navigate('/')}>
@@ -71,6 +119,7 @@ export default function Header() {
                     </div>
                     <div className="flex gap-1 sm:gap-2 items-center mt-1 sm:mt-0">
                         <Button
+                            data-tour="trades-btn"
                             variant={isActive('/trades') ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => navigate('/trades')}
@@ -84,6 +133,7 @@ export default function Header() {
                             )}
                         </Button>
                         <Button
+                            data-tour="community-btn"
                             variant={isActive('/community') ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => navigate('/community')}
@@ -95,7 +145,7 @@ export default function Header() {
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                <Button data-tour="profile-menu" variant="ghost" className="relative h-8 w-8 rounded-full">
                                     <Avatar className="h-8 w-8">
                                         <AvatarImage src={profile?.avatar_url} alt={profile?.username} />
                                         <AvatarFallback>{profile?.username?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
