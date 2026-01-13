@@ -247,31 +247,33 @@ export default function UserAlbum() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* 1. Navbar / Header */}
-            <div className="bg-white border-b py-2 px-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+            <div className="bg-white border-b py-2 px-4 flex flex-wrap justify-between items-center sticky top-0 z-20 shadow-sm gap-2">
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>← Voltar</Button>
-                    <span className="font-bold">@{targetUser?.username}</span>
+                    <span className="font-bold truncate max-w-[150px]">@{targetUser?.username}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 hidden sm:inline">Meus Álbuns:</span>
-                    <select
-                        className="text-sm border rounded p-1 max-w-[150px]"
-                        value={selectedAlbumId}
-                        onChange={(e) => setSelectedAlbumId(e.target.value)}
-                    >
-                        {myAlbums.map(album => (
-                            <option key={album.id} value={album.id}>
-                                {album.template.name}{album.nickname ? ` (${album.nickname})` : ''}
-                            </option>
-                        ))}
-                    </select>
+                <div className="flex flex-col items-end gap-2 flex-1 min-w-[140px]">
+                    <div className="flex items-center gap-2 justify-end">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">Meu Álbum:</span>
+                        <select
+                            className="text-sm border rounded p-1 max-w-[140px] truncate"
+                            value={selectedAlbumId}
+                            onChange={(e) => setSelectedAlbumId(e.target.value)}
+                        >
+                            {myAlbums.map(album => (
+                                <option key={album.id} value={album.id}>
+                                    {album.template.name}{album.nickname ? ` (${album.nickname})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
                     {targetUserAlbums.length > 1 && (
-                        <>
-                            <span className="text-xs text-gray-500 hidden sm:inline ml-2">Álbum dele(a):</span>
+                        <div className="flex items-center gap-2 justify-end">
+                            <span className="text-xs text-gray-500 whitespace-nowrap">Álbum dele(a):</span>
                             <select
-                                className="text-sm border rounded p-1 max-w-[150px]"
+                                className="text-sm border rounded p-1 max-w-[140px] truncate"
                                 value={selectedTargetAlbumId}
                                 onChange={(e) => setSelectedTargetAlbumId(e.target.value)}
                             >
@@ -281,7 +283,7 @@ export default function UserAlbum() {
                                     </option>
                                 ))}
                             </select>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
@@ -291,12 +293,12 @@ export default function UserAlbum() {
                 {/* 2. Match Summary Card */}
                 <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
                     <CardHeader>
-                        <CardTitle className="flex justify-between items-center text-lg">
+                        <CardTitle className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-lg">
                             <span>Resumo da Troca</span>
                             <Button
                                 onClick={handleProposeTrade}
                                 disabled={giving.length === 0 && receiving.length === 0}
-                                className="bg-indigo-600 hover:bg-indigo-700"
+                                className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto"
                             >
                                 Enviar Proposta
                             </Button>
@@ -314,7 +316,7 @@ export default function UserAlbum() {
                             {potentialReceive.length === 0 ? (
                                 <p className="text-gray-400 text-sm">Nada para receber deste usuário.</p>
                             ) : (
-                                <div className="flex flex-wrap gap-1">
+                                <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
                                     {potentialReceive.map(n => {
                                         const isSelected = receiving.includes(n)
                                         return (
@@ -345,7 +347,7 @@ export default function UserAlbum() {
                             {potentialGive.length === 0 ? (
                                 <p className="text-gray-400 text-sm">Nada para enviar para este usuário.</p>
                             ) : (
-                                <div className="flex flex-wrap gap-1">
+                                <div className="flex flex-wrap gap-1 max-h-[200px] overflow-y-auto">
                                     {potentialGive.map(n => {
                                         const isSelected = giving.includes(n)
                                         return (
@@ -373,7 +375,7 @@ export default function UserAlbum() {
                 <div className="mt-8">
                     <h3 className="font-bold text-gray-700 mb-4">Álbum de @{targetUser?.username} (Visão Completa)</h3>
                     {loading ? <p>Carregando...</p> : (
-                        <div className="grid grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
+                        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
                             {Array.from({ length: totalStickers }, (_, i) => i + 1).map(num => {
                                 const count = stickers[num] || 0
                                 const isGold = potentialReceive.includes(num) // They have dupe, I need

@@ -46,7 +46,12 @@ export default function AuthPage() {
         <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>{isSignUp ? 'Criar Conta' : 'Entrar no Troca.ai'}</CardTitle>
+                    <CardTitle className="flex justify-center mb-4">
+                        <img src="/logo.png" alt="Troca.ai" className="h-16 w-auto" />
+                    </CardTitle>
+                    <CardTitle className="text-center">
+                        {isSignUp ? 'Criar Conta' : 'Entrar na Plataforma'}
+                    </CardTitle>
                     <CardDescription>
                         {isSignUp
                             ? 'Preencha os dados para começar sua coleção.'

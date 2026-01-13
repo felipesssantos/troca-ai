@@ -96,7 +96,7 @@ export default function Community() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 md:grid-cols-2">
                         {filteredProfiles.map((profile) => (
                             <Card key={profile.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/user/${profile.username}`)}>
                                 <CardContent className="p-4 flex items-center gap-4">

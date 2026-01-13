@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,8 +16,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 export default function Header() {
     const { user } = useAuthStore()
     const navigate = useNavigate()
+    const location = useLocation()
     const [pendingTradesCount, setPendingTradesCount] = useState(0)
     const [profile, setProfile] = useState<{ username: string, avatar_url: string } | null>(null)
+
+    const isActive = (path: string) => location.pathname === path
 
     useEffect(() => {
         if (!user) return
@@ -60,22 +63,35 @@ export default function Header() {
     }
 
     return (
-        <div className="bg-white shadow-sm sticky top-0 z-50 p-4">
-            <div className="max-w-4xl mx-auto flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-gray-800 cursor-pointer" onClick={() => navigate('/')}>
-                        Troca.ai ⚽
-                    </h1>
-                    <div className="flex gap-2 items-center">
-                        <Button variant="default" size="sm" onClick={() => navigate('/trades')} className="relative mr-2">
-                            📩 Propostas
+        <div className="bg-white shadow-sm sticky top-0 z-50 p-2 sm:p-4">
+            <div className="max-w-4xl mx-auto">
+                <div className="flex justify-between items-center sm:gap-4 flex-wrap">
+                    <div className="cursor-pointer" onClick={() => navigate('/')}>
+                        <img src="/logo.png" alt="Troca.ai" className="h-12 w-auto object-contain" />
+                    </div>
+                    <div className="flex gap-1 sm:gap-2 items-center mt-1 sm:mt-0">
+                        <Button
+                            variant={isActive('/trades') ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => navigate('/trades')}
+                            className={`relative ${isActive('/trades') ? 'bg-green-600 text-white hover:bg-green-700' : ''}`}
+                        >
+                            Propostas
                             {pendingTradesCount > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce">
+                                <span className={`absolute top-0 right-0 text-[10px] rounded-full h-4 w-4 flex items-center justify-center animate-bounce ${isActive('/trades') ? 'bg-white text-green-600' : 'bg-green-600 text-white'}`}>
                                     {pendingTradesCount}
                                 </span>
                             )}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/community')} className="mr-2">Área de Troca</Button>
+                        <Button
+                            variant={isActive('/community') ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => navigate('/community')}
+                            className={`mr-2 ${isActive('/community') ? 'bg-green-600 text-white hover:bg-green-700' : ''}`}
+                        >
+                            <span className="hidden sm:inline">Área de Troca</span>
+                            <span className="sm:hidden">Trocas</span>
+                        </Button>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
