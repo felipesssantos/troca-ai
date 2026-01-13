@@ -247,44 +247,46 @@ export default function UserAlbum() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* 1. Navbar / Header */}
-            <div className="bg-white border-b py-2 px-4 flex flex-wrap justify-between items-center sticky top-0 z-20 shadow-sm gap-2">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>← Voltar</Button>
-                    <span className="font-bold truncate max-w-[150px]">@{targetUser?.username}</span>
-                </div>
-
-                <div className="flex flex-col items-end gap-2 flex-1 min-w-[140px]">
-                    <div className="flex items-center gap-2 justify-end">
-                        <span className="text-xs text-gray-500 whitespace-nowrap">Meu Álbum:</span>
-                        <select
-                            className="text-sm border rounded p-1 max-w-[140px] truncate"
-                            value={selectedAlbumId}
-                            onChange={(e) => setSelectedAlbumId(e.target.value)}
-                        >
-                            {myAlbums.map(album => (
-                                <option key={album.id} value={album.id}>
-                                    {album.template.name}{album.nickname ? ` (${album.nickname})` : ''}
-                                </option>
-                            ))}
-                        </select>
+            <div className="bg-white border-b sticky top-0 z-20 shadow-sm">
+                <div className="max-w-4xl mx-auto py-2 px-4 flex flex-wrap justify-between items-center gap-2">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/community')}>← Voltar</Button>
+                        <span className="font-bold truncate max-w-[150px]">@{targetUser?.username}</span>
                     </div>
 
-                    {targetUserAlbums.length > 1 && (
+                    <div className="flex flex-col items-end gap-2 flex-1 min-w-[140px]">
                         <div className="flex items-center gap-2 justify-end">
-                            <span className="text-xs text-gray-500 whitespace-nowrap">Álbum dele(a):</span>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">Meu Álbum:</span>
                             <select
                                 className="text-sm border rounded p-1 max-w-[140px] truncate"
-                                value={selectedTargetAlbumId}
-                                onChange={(e) => setSelectedTargetAlbumId(e.target.value)}
+                                value={selectedAlbumId}
+                                onChange={(e) => setSelectedAlbumId(e.target.value)}
                             >
-                                {targetUserAlbums.map((album: any) => (
+                                {myAlbums.map(album => (
                                     <option key={album.id} value={album.id}>
-                                        {album.nickname || `Álbum ${album.id.slice(0, 4)}`}
+                                        {album.template.name}{album.nickname ? ` (${album.nickname})` : ''}
                                     </option>
                                 ))}
                             </select>
                         </div>
-                    )}
+
+                        {targetUserAlbums.length > 1 && (
+                            <div className="flex items-center gap-2 justify-end">
+                                <span className="text-xs text-gray-500 whitespace-nowrap">Álbum dele(a):</span>
+                                <select
+                                    className="text-sm border rounded p-1 max-w-[140px] truncate"
+                                    value={selectedTargetAlbumId}
+                                    onChange={(e) => setSelectedTargetAlbumId(e.target.value)}
+                                >
+                                    {targetUserAlbums.map((album: any) => (
+                                        <option key={album.id} value={album.id}>
+                                            {album.nickname || `Álbum ${album.id.slice(0, 4)}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
