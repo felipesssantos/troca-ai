@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useTour } from '@/hooks/useTour'
+import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 
 
 // Hardcoded TOTAL_STICKERS removed
@@ -12,6 +13,12 @@ import { useTour } from '@/hooks/useTour'
 interface StickerData {
     sticker_number: number
     count: number
+}
+
+interface StickerMetadata {
+    sticker_number: number
+    display_code: string
+    section: string
 }
 
 interface Profile {
@@ -36,6 +43,15 @@ export default function UserAlbum() {
 
     const [loading, setLoading] = useState(true)
     const [totalStickers, setTotalStickers] = useState(670) // Default fallback
+
+    // Metadata State
+    const [metadata, setMetadata] = useState<StickerMetadata[]>([])
+    const [idToCode, setIdToCode] = useState<Record<number, string>>({})
+
+    // UI State (Search & Collapse)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+
 
     // Trade Proposal State
     const [giving, setGiving] = useState<number[]>([]) // Stickers I give
@@ -94,6 +110,8 @@ export default function UserAlbum() {
             setPotentialReceive([])
             setGiving([])
             setReceiving([])
+            setMetadata([])
+            setIdToCode({})
 
             try {
                 // A. Get Target User ID
@@ -125,6 +143,23 @@ export default function UserAlbum() {
                 const albumTotal = myAlbumData.albums?.total_stickers || 670
 
                 setTotalStickers(albumTotal) // Update dynamic total
+
+                // B.1 Fetch Metadata for this template
+                if (currentTemplateId) {
+                    const { data: metaData } = await supabase
+                        .from('stickers')
+                        .select('sticker_number, display_code, section')
+                        .eq('album_id', currentTemplateId)
+                        .order('sticker_number', { ascending: true })
+
+                    if (metaData && metaData.length > 0) {
+                        setMetadata(metaData)
+                        const map: Record<number, string> = {}
+                        metaData.forEach(m => map[m.sticker_number] = m.display_code)
+                        setIdToCode(map)
+                    }
+                }
+
 
                 // C. Find THEIR matching albums (Same Template)
                 const { data: theirAlbumsData } = await supabase
@@ -230,6 +265,10 @@ export default function UserAlbum() {
         setReceiving(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])
     }
 
+    const toggleSection = (section: string) => {
+        setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))
+    }
+
     const handleProposeTrade = async () => {
         if (!currentUser || !targetUser || !selectedAlbumId) return
         if (giving.length === 0 && receiving.length === 0) return
@@ -259,6 +298,113 @@ export default function UserAlbum() {
         } finally {
             setLoading(false)
         }
+    }
+
+    // Helper to get display label
+    const getLabel = (num: number) => idToCode[num] || num.toString()
+
+    // Render Helpers
+    const renderFullAlbum = () => {
+        if (loading) return <p>Carregando...</p>
+
+        // 1. If Metadata exists, use Sections
+        if (metadata.length > 0) {
+            const sections: Record<string, StickerMetadata[]> = {}
+            const sectionOrder: string[] = []
+
+            metadata.forEach(s => {
+                if (!sections[s.section]) {
+                    sections[s.section] = []
+                    sectionOrder.push(s.section)
+                }
+                sections[s.section].push(s)
+            })
+
+            const filteredSections = sectionOrder.filter(secTitle =>
+                searchTerm === '' || secTitle.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+
+            if (filteredSections.length === 0) {
+                return <div className="text-center py-4 text-gray-400">Nenhuma seção encontrada.</div>
+            }
+
+            return (
+                <div className="space-y-4">
+                    {filteredSections.map(secTitle => {
+                        const stickersInSec = sections[secTitle]
+                        const isCollapsed = collapsedSections[secTitle]
+
+                        return (
+                            <div key={secTitle} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                                <button
+                                    onClick={() => toggleSection(secTitle)}
+                                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                                >
+                                    <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                                        {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                                        {secTitle}
+                                        <span className="text-xs font-normal text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
+                                            {stickersInSec.length}
+                                        </span>
+                                    </h3>
+                                </button>
+
+                                {!isCollapsed && (
+                                    <div className="p-3 bg-white border-t border-gray-100">
+                                        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1 opacity-90">
+                                            {stickersInSec.map(s => {
+                                                const num = s.sticker_number
+                                                const count = stickers[num] || 0
+                                                const isGold = potentialReceive.includes(num)
+                                                const isBlue = potentialGive.includes(num)
+
+                                                return (
+                                                    <div key={num}
+                                                        className={`
+                                                            aspect-square rounded flex items-center justify-center text-[10px] font-bold select-none
+                                                            ${isGold ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600 z-10 scale-110 shadow-lg' :
+                                                                isBlue ? 'bg-blue-400 text-white border-2 border-blue-600 z-10 scale-110 shadow-lg' :
+                                                                    count > 0 ? 'bg-gray-300 text-gray-600' : 'bg-gray-100 text-gray-300'}
+                                                        `}
+                                                    >
+                                                        {s.display_code}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )
+        }
+
+        // 2. Fallback Grid
+        return (
+            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
+                {Array.from({ length: totalStickers }, (_, i) => i + 1).map(num => {
+                    const count = stickers[num] || 0
+                    const isGold = potentialReceive.includes(num) // They have dupe, I need
+                    const isBlue = potentialGive.includes(num) // I have dupe, they need
+
+                    return (
+                        <div
+                            key={num}
+                            className={`
+                        aspect-square rounded flex items-center justify-center text-[10px] font-bold
+                        ${isGold ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600 z-10 scale-110 shadow-lg' :
+                                    isBlue ? 'bg-blue-400 text-white border-2 border-blue-600 z-10 scale-110 shadow-lg' :
+                                        count > 0 ? 'bg-gray-300 text-gray-600' : 'bg-gray-100 text-gray-300'}
+                    `}
+                        >
+                            {num}
+                        </div>
+                    )
+                })}
+            </div>
+        )
     }
 
     return (
@@ -351,7 +497,7 @@ export default function UserAlbum() {
                                                         : 'bg-gray-50 text-gray-300 border-dashed border-gray-200 scale-95'}
                                                 `}
                                             >
-                                                {n}
+                                                {getLabel(n)}
                                             </button>
                                         )
                                     })}
@@ -382,7 +528,7 @@ export default function UserAlbum() {
                                                         : 'bg-gray-50 text-gray-300 border-dashed border-gray-200 scale-95'}
                                                 `}
                                             >
-                                                {n}
+                                                {getLabel(n)}
                                             </button>
                                         )
                                     })}
@@ -394,30 +540,24 @@ export default function UserAlbum() {
 
                 {/* 3. Full Album View Grid */}
                 <div className="mt-8">
-                    <h3 className="font-bold text-gray-700 mb-4">Álbum de @{targetUser?.username} (Visão Completa)</h3>
-                    {loading ? <p>Carregando...</p> : (
-                        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1 opacity-80">
-                            {Array.from({ length: totalStickers }, (_, i) => i + 1).map(num => {
-                                const count = stickers[num] || 0
-                                const isGold = potentialReceive.includes(num) // They have dupe, I need
-                                const isBlue = potentialGive.includes(num) // I have dupe, they need
-
-                                return (
-                                    <div
-                                        key={num}
-                                        className={`
-                                    aspect-square rounded flex items-center justify-center text-[10px] font-bold
-                                    ${isGold ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600 z-10 scale-110 shadow-lg' :
-                                                isBlue ? 'bg-blue-400 text-white border-2 border-blue-600 z-10 scale-110 shadow-lg' :
-                                                    count > 0 ? 'bg-gray-300 text-gray-600' : 'bg-gray-100 text-gray-300'}
-                                `}
-                                    >
-                                        {num}
-                                    </div>
-                                )
-                            })}
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-gray-700">Álbum de @{targetUser?.username} (Visão Completa)</h3>
+                        {/* Search Bar for Full View */}
+                        <div className="relative shadow-sm max-w-[200px]">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-4 w-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Buscar..."
+                                className="block w-full pl-8 pr-2 py-1 border border-gray-300 rounded-lg text-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                    )}
+                    </div>
+
+                    {renderFullAlbum()}
                 </div>
 
             </div>

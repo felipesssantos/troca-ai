@@ -1,29 +1,35 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-// import { Button } from '@/components/ui/button'
-// import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useParams } from 'react-router-dom'
+import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 
-// Removed hardcoded TOTAL_STICKERS
+interface StickerMetadata {
+    sticker_number: number
+    display_code: string
+    section: string
+}
 
 interface StickerData {
     sticker_number: number
     count: number
 }
 
-// Custom imports
-import { useParams } from 'react-router-dom'
-
-// ... (existing imports)
-
 export default function Album() {
     const { user } = useAuthStore()
     const { albumId } = useParams()
-    const [stickers, setStickers] = useState<Record<number, number>>({})
+
+    // State
+    const [userDistricts, setUserDistricts] = useState<Record<number, number>>({}) // Map: ID -> Count
+    const [metadata, setMetadata] = useState<StickerMetadata[]>([])
     const [loading, setLoading] = useState(true)
-    const [totalStickers, setTotalStickers] = useState(670) // Default fallback
+    const [totalStickers, setTotalStickers] = useState(670)
     const [filter, setFilter] = useState<'all' | 'missing' | 'repeated'>('all')
+
+    // UI State
+    const [searchTerm, setSearchTerm] = useState('')
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
 
     // Load initial data
     useEffect(() => {
@@ -32,7 +38,7 @@ export default function Album() {
         const fetchData = async () => {
             setLoading(true)
 
-            // 1. Get Album Info (Total Stickers)
+            // 1. Get Album Info
             const { data: albumData } = await supabase
                 .from('user_albums')
                 .select('album_template_id, albums(total_stickers)')
@@ -44,21 +50,34 @@ export default function Album() {
                 setTotalStickers(albumData.albums.total_stickers)
             }
 
-            // 2. Get User Stickers
-            const { data, error } = await supabase
+            // 2. Get Metadata (Sticker Codes & Sections)
+            // We join with the user's template ID, but for now assuming global stickers for this template
+            // Since we passed the albumId, we can find the template.
+            // Actually, stickers are linked to 'albums' (template), not 'user_albums'.
+            // So we need album_template_id.
+            if (albumData?.album_template_id) {
+                const { data: metaData } = await supabase
+                    .from('stickers')
+                    .select('sticker_number, display_code, section')
+                    .eq('album_id', albumData.album_template_id)
+                    .order('sticker_number', { ascending: true })
+
+                if (metaData) setMetadata(metaData)
+            }
+
+            // 3. Get User Stickers (Ownership)
+            const { data: userData, error } = await supabase
                 .from('user_stickers')
                 .select('sticker_number, count')
                 .eq('user_id', user.id)
                 .eq('user_album_id', albumId)
 
-            if (error) {
-                console.error('Error fetching stickers:', error)
-            } else {
+            if (!error && userData) {
                 const stickerMap: Record<number, number> = {}
-                data?.forEach((s: StickerData) => {
+                userData.forEach((s: StickerData) => {
                     stickerMap[s.sticker_number] = s.count
                 })
-                setStickers(stickerMap)
+                setUserDistricts(stickerMap)
             }
             setLoading(false)
         }
@@ -66,20 +85,19 @@ export default function Album() {
         fetchData()
     }, [user, albumId])
 
-    // Handle interactions
+    // Interactions
     const updateStickerCount = async (num: number, increment: boolean) => {
         if (!user || !albumId) return
 
-        const currentCount = stickers[num] || 0
+        const currentCount = userDistricts[num] || 0
         let newCount = increment ? currentCount + 1 : currentCount - 1
+        if (newCount < 0) newCount = 0
 
-        if (newCount < 0) newCount = 0 // Cannot have negative
+        // Optimistic
+        setUserDistricts((prev) => ({ ...prev, [num]: newCount }))
 
-        // Optimistic Update
-        setStickers((prev) => ({ ...prev, [num]: newCount }))
-
-        // Save to DB
-        const { error } = await supabase
+        // DB
+        await supabase
             .from('user_stickers')
             .upsert({
                 user_id: user.id,
@@ -87,117 +105,208 @@ export default function Album() {
                 sticker_number: num,
                 count: newCount
             }, { onConflict: 'user_album_id, sticker_number' })
-
-        if (error) {
-            console.error('Error saving sticker:', error)
-            // Rollback state in real app
-        }
     }
 
-    const handleLeftClick = (num: number) => {
-        updateStickerCount(num, true)
-    }
-
+    const handleLeftClick = (num: number) => updateStickerCount(num, true)
     const handleRightClick = (e: React.MouseEvent, num: number) => {
-        e.preventDefault() // Prevent context menu
+        e.preventDefault()
         updateStickerCount(num, false)
     }
 
-    // Calculate stats
-    const totalOwned = Object.values(stickers).filter(c => c > 0).length
-    const totalRepeated = Object.values(stickers).filter(c => c > 1).reduce((acc, c) => acc + (c - 1), 0)
-    const percentage = totalStickers > 0 ? Math.round((totalOwned / totalStickers) * 100) : 0
-
-    // Filter Logic
-    const getVisibleStickers = () => {
-        const list = Array.from({ length: totalStickers }, (_, i) => i + 1)
-        if (filter === 'all') return list
-        if (filter === 'missing') return list.filter(n => !stickers[n])
-        if (filter === 'repeated') return list.filter(n => (stickers[n] || 0) > 1)
-        return list
+    const toggleSection = (section: string) => {
+        setCollapsedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }))
     }
 
+    // Stats
+    const totalOwned = Object.values(userDistricts).filter(c => c > 0).length
+    const totalRepeated = Object.values(userDistricts).filter(c => c > 1).reduce((acc, c) => acc + (c - 1), 0)
+    const percentage = totalStickers > 0 ? Math.round((totalOwned / totalStickers) * 100) : 0
 
+    // Grouping Logic
+    const renderContent = () => {
+        // If we have metadata, use sections
+        if (metadata.length > 0) {
+            const sections: Record<string, StickerMetadata[]> = {}
+            const sectionOrder: string[] = []
+
+            metadata.forEach(s => {
+                if (!sections[s.section]) {
+                    sections[s.section] = []
+                    sectionOrder.push(s.section)
+                }
+
+                // Apply Filters
+                const count = userDistricts[s.sticker_number] || 0
+                let visible = true
+                if (filter === 'missing' && count > 0) visible = false
+                if (filter === 'repeated' && count <= 1) visible = false
+
+                if (visible) sections[s.section].push(s)
+            })
+
+            // Apply Search Filter
+            const filteredSections = sectionOrder.filter(secTitle =>
+                searchTerm === '' || secTitle.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+
+            if (filteredSections.length === 0) {
+                return <div className="text-center py-10 text-gray-400">Nenhuma seção encontrada.</div>
+            }
+
+            return (
+                <div className="space-y-4">
+                    {filteredSections.map(secTitle => {
+                        const stickersInSec = sections[secTitle]
+                        if (stickersInSec.length === 0) return null
+
+                        const isCollapsed = collapsedSections[secTitle]
+
+                        return (
+                            <div key={secTitle} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                                <button
+                                    onClick={() => toggleSection(secTitle)}
+                                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                                >
+                                    <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                                        {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                                        {secTitle}
+                                        <span className="text-xs font-normal text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
+                                            {stickersInSec.length}
+                                        </span>
+                                    </h3>
+                                </button>
+
+                                {!isCollapsed && (
+                                    <div className="p-3 bg-white border-t border-gray-100">
+                                        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                                            {stickersInSec.map((s) => (
+                                                <StickerButton
+                                                    key={s.sticker_number}
+                                                    id={s.sticker_number}
+                                                    label={s.display_code}
+                                                    count={userDistricts[s.sticker_number] || 0}
+                                                    onLeftClick={handleLeftClick}
+                                                    onRightClick={handleRightClick}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )
+        }
+
+        // Fallback: Legacy Grid (1..N)
+        const list = Array.from({ length: totalStickers }, (_, i) => i + 1)
+        const filteredList = list.filter(n => {
+            const c = userDistricts[n] || 0
+            if (filter === 'missing') return c === 0
+            if (filter === 'repeated') return c > 1
+            return true
+        })
+
+        return (
+            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                {filteredList.map(num => (
+                    <StickerButton
+                        key={num}
+                        id={num}
+                        label={num.toString()}
+                        count={userDistricts[num] || 0}
+                        onLeftClick={handleLeftClick}
+                        onRightClick={handleRightClick}
+                    />
+                ))}
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Header Stats */}
-            <div className="max-w-4xl mx-auto pt-4 px-4">
-                {/* Stats Panel */}
+            {/* Header Stats & Tools */}
+            <div className="max-w-6xl mx-auto pt-4 px-4 sticky top-0 bg-gray-50 z-10 pb-2 space-y-3">
 
-                <div className="flex gap-4 text-sm justify-between bg-gray-100 p-3 rounded-lg">
+                <div className="flex gap-4 text-sm justify-between bg-white border p-3 rounded-lg shadow-sm">
                     <div className="text-center">
-                        <div className="font-bold text-green-600">{totalOwned}</div>
-                        <div className="text-xs text-gray-500">Tenho</div>
+                        <div className="font-bold text-green-600 text-lg">{totalOwned}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide">Tenho</div>
                     </div>
                     <div className="text-center">
-                        <div className="font-bold text-blue-600">{totalRepeated}</div>
-                        <div className="text-xs text-gray-500">Repetidas</div>
+                        <div className="font-bold text-blue-600 text-lg">{totalRepeated}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide">Repetidas</div>
                     </div>
                     <div className="text-center">
-                        <div className="font-bold text-gray-700">{percentage}%</div>
-                        <div className="text-xs text-gray-500">Completo</div>
+                        <div className="font-bold text-gray-700 text-lg">{percentage}%</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide">Completo</div>
                     </div>
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                    <Badge
-                        variant={filter === 'all' ? 'default' : 'outline'}
-                        onClick={() => setFilter('all')}
-                        className="cursor-pointer"
-                    >
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    <Badge variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')} className="cursor-pointer whitespace-nowrap">
                         Todas
                     </Badge>
-                    <Badge
-                        variant={filter === 'missing' ? 'default' : 'outline'}
-                        onClick={() => setFilter('missing')}
-                        className="cursor-pointer"
-                    >
+                    <Badge variant={filter === 'missing' ? 'default' : 'outline'} onClick={() => setFilter('missing')} className="cursor-pointer whitespace-nowrap">
                         Faltam ({totalStickers - totalOwned})
                     </Badge>
-                    <Badge
-                        variant={filter === 'repeated' ? 'default' : 'outline'}
-                        onClick={() => setFilter('repeated')}
-                        className="cursor-pointer"
-                    >
+                    <Badge variant={filter === 'repeated' ? 'default' : 'outline'} onClick={() => setFilter('repeated')} className="cursor-pointer whitespace-nowrap">
                         Repetidas ({totalRepeated})
                     </Badge>
                 </div>
+
+                {/* Search Bar */}
+                <div className="relative shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Buscar time ou seção..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </div>
 
-
-            {/* Grid */}
-            <div className="max-w-4xl mx-auto p-4">
+            {/* Content */}
+            <div className="max-w-6xl mx-auto p-4">
                 {loading ? (
-                    <p className="text-center py-10 text-gray-500">Carregando figurinhas...</p>
-                ) : (
-                    <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                        {getVisibleStickers().map((num) => {
-                            const count = stickers[num] || 0
-                            return (
-                                <button
-                                    key={num}
-                                    onClick={() => handleLeftClick(num)}
-                                    onContextMenu={(e) => handleRightClick(e, num)}
-                                    className={`
-                    aspect-square rounded-md flex flex-col items-center justify-center font-bold text-sm transition-all select-none
-                    ${count === 0 ? 'bg-white border text-gray-300 hover:border-gray-400' : ''}
-                    ${count === 1 ? 'bg-green-500 text-white border-green-600 shadow-md transform scale-105' : ''}
-                    ${count > 1 ? 'bg-blue-500 text-white border-blue-600 shadow-md' : ''}
-                    `}
-                                >
-                                    {num}
-                                    {count > 1 && (
-                                        <span className="text-[10px] bg-white text-blue-600 px-1 rounded-full mt-1">
-                                            +{count - 1}
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        })}
+                    <div className="flex justify-center py-20">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                     </div>
+                ) : (
+                    renderContent()
                 )}
             </div>
-        </div >
+        </div>
+    )
+}
+
+// Subcomponent for Sticker Button
+function StickerButton({ id, label, count, onLeftClick, onRightClick }: any) {
+    return (
+        <button
+            onClick={() => onLeftClick(id)}
+            onContextMenu={(e) => onRightClick(e, id)}
+            className={`
+                aspect-[4/5] rounded-md flex flex-col items-center justify-center font-bold text-sm transition-all select-none relative
+                ${count === 0 ? 'bg-white border-2 border-gray-200 text-gray-400 hover:border-gray-300' : ''}
+                ${count === 1 ? 'bg-green-500 text-white border-2 border-green-600 shadow-md transform scale-[1.02]' : ''}
+                ${count > 1 ? 'bg-blue-500 text-white border-2 border-blue-600 shadow-md' : ''}
+            `}
+        >
+            <span className="z-10">{label}</span>
+            {count > 1 && (
+                <span className="absolute -top-2 -right-2 text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full shadow-sm border border-white z-20">
+                    +{count - 1}
+                </span>
+            )}
+        </button>
     )
 }

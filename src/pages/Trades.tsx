@@ -19,6 +19,10 @@ interface Trade {
         username: string
         avatar_url: string
     }
+    receiver?: {
+        username: string
+        avatar_url: string
+    }
     sender_album?: {
         album_template_id: string
         template: {
@@ -32,6 +36,9 @@ export default function Trades() {
     const navigate = useNavigate()
     const [trades, setTrades] = useState<Trade[]>([])
     const [loading, setLoading] = useState(true)
+
+    // Mapping: TemplateID -> { Number -> DisplayCode }
+    const [codeMap, setCodeMap] = useState<Record<string, Record<number, string>>>({})
 
     useTour('trades', [
         {
@@ -62,24 +69,43 @@ export default function Trades() {
             // Fetch SENT trades
             const { data: sentData } = await supabase
                 .from('trades')
-                .select(`*, receiver:receiver_id(username, avatar_url), sender_album:sender_album_id(template:albums(name))`)
+                .select(`*, receiver:receiver_id(username, avatar_url), sender_album:sender_album_id(album_template_id, template:albums(name))`)
                 .eq('sender_id', user.id)
                 .order('created_at', { ascending: false })
-
-            // Combine or separate? Storing in one state with filter is easier, or two states.
-            // Let's use a single state but typed with 'direction'.
-            // Actually, simpler to just map them to a display structure.
 
             const processedReceived = (receivedData || []).map((t: any) => ({ ...t, type: 'received', otherUser: t.sender }))
             const processedSent = (sentData || []).map((t: any) => ({ ...t, type: 'sent', otherUser: t.receiver }))
 
-            setTrades([...processedReceived, ...processedSent])
+            const allTrades = [...processedReceived, ...processedSent]
+            setTrades(allTrades)
+
+            // 2. Fetch Stickers Metadata for all involved Templates
+            const templateIds = new Set<string>()
+            allTrades.forEach((t: any) => {
+                const tid = t.sender_album?.album_template_id
+                if (tid) templateIds.add(tid)
+            })
+
+            if (templateIds.size > 0) {
+                const { data: metaData } = await supabase
+                    .from('stickers')
+                    .select('album_id, sticker_number, display_code')
+                    .in('album_id', Array.from(templateIds))
+
+                if (metaData) {
+                    const newMap: Record<string, Record<number, string>> = {}
+                    metaData.forEach(m => {
+                        if (!newMap[m.album_id]) newMap[m.album_id] = {}
+                        newMap[m.album_id][m.sticker_number] = m.display_code
+                    })
+                    setCodeMap(newMap)
+                }
+            }
+
             setLoading(false)
         }
 
         fetchTrades()
-
-        // Subscribe to changes (simplified for now: just refresh on action)
     }, [user])
 
     // Acceptance State
@@ -94,7 +120,6 @@ export default function Trades() {
             .then(({ data }) => {
                 if (data) {
                     setMyAlbums(data as any)
-                    // Don't set default destination yet, depends on the trade
                 }
             })
     }, [user])
@@ -175,6 +200,15 @@ export default function Trades() {
         }
     }
 
+    // Helper to get Label
+    const getLabel = (trade: Trade, stickerNum: number) => {
+        const templateId = trade.sender_album?.album_template_id
+        if (templateId && codeMap[templateId] && codeMap[templateId][stickerNum]) {
+            return codeMap[templateId][stickerNum]
+        }
+        return stickerNum.toString()
+    }
+
     const filteredTrades = trades.filter(t => {
         if (activeTab === 'received') return (t as any).type === 'received'
         return (t as any).type === 'sent'
@@ -241,7 +275,11 @@ export default function Trades() {
                                             {activeTab === 'received' ? 'Ele te dá:' : 'Você dá:'}
                                         </span>
                                         <div className="flex flex-wrap gap-1">
-                                            {trade.offer_stickers.map((n: number) => <span key={n} className="px-1 bg-white border rounded text-xs">{n}</span>)}
+                                            {trade.offer_stickers.map((n: number) => (
+                                                <span key={n} className="px-1 bg-white border rounded text-xs">
+                                                    {getLabel(trade, n)}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
                                     <div className="bg-green-50 p-2 rounded border border-green-100">
@@ -249,7 +287,11 @@ export default function Trades() {
                                             {activeTab === 'received' ? 'Você dá:' : 'Ele te dá:'}
                                         </span>
                                         <div className="flex flex-wrap gap-1">
-                                            {trade.request_stickers.map((n: number) => <span key={n} className="px-1 bg-white border rounded text-xs">{n}</span>)}
+                                            {trade.request_stickers.map((n: number) => (
+                                                <span key={n} className="px-1 bg-white border rounded text-xs">
+                                                    {getLabel(trade, n)}
+                                                </span>
+                                            ))}
                                         </div>
                                     </div>
                                 </CardContent>
