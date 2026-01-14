@@ -36,6 +36,11 @@ jobs:
             git clone https://github.com/${{ github.repository }}.git .
           fi
 
+          # Reset any local changes to tracked files (like .env if it was tracked before)
+          git reset --hard HEAD
+          # Also remove .env if it exists untracked/conflicting, just to be sure
+          rm -f .env || true
+
           git pull origin main
 
           # 3. Create .env file from Secrets
