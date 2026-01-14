@@ -162,11 +162,18 @@ export default function UserAlbum() {
 
 
                 // C. Find THEIR matching albums (Same Template)
-                const { data: theirAlbumsData } = await supabase
+                let query = supabase
                     .from('user_albums')
                     .select('id, nickname')
                     .eq('user_id', profileData.id)
                     .eq('album_template_id', currentTemplateId)
+
+                // If viewing someone else, respect privacy
+                if (currentUser.id !== profileData.id) {
+                    query = query.eq('is_public', true)
+                }
+
+                const { data: theirAlbumsData } = await query
 
                 if (!theirAlbumsData || theirAlbumsData.length === 0) {
                     setTargetUserAlbums([])

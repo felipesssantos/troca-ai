@@ -36,13 +36,17 @@ export default function Community() {
     const [cityFilter, setCityFilter] = useState('')
     const [stateFilter, setStateFilter] = useState('')
 
+    // Derived state for display
+    const [displayProfiles, setDisplayProfiles] = useState<Profile[]>([])
+
+    // 1. Fetch ALL Public Profiles on Mount (for the general list)
     useEffect(() => {
-        const fetchProfiles = async () => {
+        const fetchPublicProfiles = async () => {
             setLoading(true)
-            // Fetch all profiles except my own
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, username, avatar_url, city, state')
+                .eq('is_public', true) // ONLY PUBLIC
                 .neq('id', user?.id || '')
 
             if (error) {
@@ -53,16 +57,54 @@ export default function Community() {
             setLoading(false)
         }
 
-        if (user) fetchProfiles()
+        if (user) fetchPublicProfiles()
     }, [user])
 
-    const filteredProfiles = profiles.filter(profile => {
-        const matchesUsername = profile.username.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesCity = cityFilter ? profile.city?.toLowerCase().includes(cityFilter.toLowerCase()) : true
-        const matchesState = stateFilter ? profile.state?.toLowerCase() === stateFilter.toLowerCase() : true
+    // 2. Handle Search & Filtering
+    useEffect(() => {
+        const doSearch = async () => {
+            // Start with local public profiles filtered by search term partial match
+            let results = profiles.filter(profile => {
+                const matchesUsername = profile.username.toLowerCase().includes(searchTerm.toLowerCase())
+                const matchesCity = cityFilter ? profile.city?.toLowerCase().includes(cityFilter.toLowerCase()) : true
+                const matchesState = stateFilter ? profile.state?.toLowerCase() === stateFilter.toLowerCase() : true
+                return matchesUsername && matchesCity && matchesState
+            })
 
-        return matchesUsername && matchesCity && matchesState
-    })
+            // If we have a specific search term, try to find HIDDEN users by EXACT match
+            if (searchTerm && searchTerm.length > 2) {
+                // Check if we already have this user in the public list
+                const alreadyFound = results.some(p => p.username.toLowerCase() === searchTerm.toLowerCase())
+
+                if (!alreadyFound) {
+                    // Try to find hidden user
+                    const { data: hiddenUser } = await supabase
+                        .from('profiles')
+                        .select('id, username, avatar_url, city, state')
+                        .eq('username', searchTerm) // Exact match
+                        .neq('id', user?.id || '')
+                        .single()
+
+                    if (hiddenUser) {
+                        // Respect extra filters if applied, though usually exact search overrides
+                        const matchesCity = cityFilter ? hiddenUser.city?.toLowerCase().includes(cityFilter.toLowerCase()) : true
+                        const matchesState = stateFilter ? hiddenUser.state?.toLowerCase() === stateFilter.toLowerCase() : true
+
+                        if (matchesCity && matchesState) {
+                            results = [...results, hiddenUser]
+                        }
+                    }
+                }
+            }
+            setDisplayProfiles(results)
+        }
+
+        const timer = setTimeout(doSearch, 500) // Debounce 500ms
+        return () => clearTimeout(timer)
+    }, [searchTerm, cityFilter, stateFilter, profiles, user])
+
+    // No longer using filteredProfiles directly in render
+
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-20">
@@ -101,7 +143,7 @@ export default function Community() {
 
                 {loading ? (
                     <p>Carregando usuários...</p>
-                ) : filteredProfiles.length === 0 ? (
+                ) : displayProfiles.length === 0 ? (
                     <Card>
                         <CardContent className="p-6 text-center text-gray-500">
                             {searchTerm ? 'Nenhum usuário encontrado com esse nome.' : 'Nenhum outro usuário encontrado. Convide amigos!'}
@@ -109,7 +151,7 @@ export default function Community() {
                     </Card>
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2">
-                        {filteredProfiles.map((profile) => (
+                        {displayProfiles.map((profile) => (
                             <Card key={profile.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/user/${profile.username}`)}>
                                 <CardContent className="p-4 flex items-center gap-4">
                                     <Avatar className="h-12 w-12 text-sm bg-gray-200">

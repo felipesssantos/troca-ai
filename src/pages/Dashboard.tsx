@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { PlusCircle, BookOpen } from 'lucide-react'
+import { PlusCircle, BookOpen, Eye, EyeOff } from 'lucide-react'
 
 // Types
 type AlbumTemplate = {
@@ -22,6 +22,7 @@ type UserAlbum = {
     nickname: string | null
     album_template_id: string
     template: AlbumTemplate // Joined data
+    is_public: boolean
 }
 
 export default function Dashboard() {
@@ -70,6 +71,7 @@ export default function Dashboard() {
                         id,
                         nickname,
                         album_template_id,
+                        is_public,
                         template:albums ( * )
                     `)
                     .eq('user_id', user.id)
@@ -98,7 +100,8 @@ export default function Dashboard() {
                 .insert({
                     user_id: user.id,
                     album_template_id: selectedTemplate,
-                    nickname: nickname || null
+                    nickname: nickname || null,
+                    is_public: true // Default public
                 })
 
             if (error) throw error
@@ -110,6 +113,7 @@ export default function Dashboard() {
                     id,
                     nickname,
                     album_template_id,
+                    is_public,
                     template:albums ( * )
                 `)
                 .eq('user_id', user.id)
@@ -125,6 +129,24 @@ export default function Dashboard() {
             alert('Erro ao criar álbum: ' + err.message)
         } finally {
             setCreating(false)
+        }
+    }
+
+    const toggleAlbumVisibility = async (e: React.MouseEvent, albumId: string, currentStatus: boolean) => {
+        e.stopPropagation() // Prevent card click
+        if (!confirm(`Deseja tornar este álbum ${currentStatus ? 'privado' : 'público'}?`)) return
+
+        try {
+            const { error } = await supabase
+                .from('user_albums')
+                .update({ is_public: !currentStatus })
+                .eq('id', albumId)
+
+            if (error) throw error
+
+            setUserAlbums(prev => prev.map(a => a.id === albumId ? { ...a, is_public: !currentStatus } : a))
+        } catch (err: any) {
+            alert('Erro ao atualizar privacidade: ' + err.message)
         }
     }
 
@@ -202,14 +224,26 @@ export default function Dashboard() {
                     {userAlbums.map(album => (
                         <Card
                             key={album.id}
-                            className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500 group"
+                            className={`cursor-pointer hover:shadow-lg transition-shadow border-2 group relative ${!album.is_public ? 'border-dashed border-gray-300 bg-gray-50' : 'hover:border-blue-500'}`}
                             onClick={() => {
                                 navigate(`/album/${album.id}`)
                             }}
                         >
+                            <div className="absolute top-2 right-2 z-10">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 bg-white/80 hover:bg-white shadow-sm rounded-full"
+                                    onClick={(e) => toggleAlbumVisibility(e, album.id, album.is_public)}
+                                    title={album.is_public ? "Público (Visível para todos)" : "Privado (Oculto)"}
+                                >
+                                    {album.is_public ? <Eye size={16} className="text-green-600" /> : <EyeOff size={16} className="text-gray-400" />}
+                                </Button>
+                            </div>
+
                             <CardHeader className="pb-4">
                                 <div className="flex justify-between items-start">
-                                    <CardTitle className="flex items-center gap-2 text-base">
+                                    <CardTitle className="flex items-center gap-2 text-base pr-8">
                                         {album.template.name}
                                     </CardTitle>
                                     <BookOpen className="h-5 w-5 text-gray-400 group-hover:text-blue-500" />
@@ -225,9 +259,9 @@ export default function Dashboard() {
                             <CardContent>
                                 <div className="relative w-full h-32 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
                                     {album.template.cover_image ? (
-                                        <img src={album.template.cover_image} alt={album.template.name} className="w-full h-full object-cover" />
+                                        <img src={album.template.cover_image} alt={album.template.name} className={`w-full h-full object-cover ${!album.is_public ? 'grayscale opacity-70' : ''}`} />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-yellow-100 to-green-100 flex items-center justify-center">
+                                        <div className={`w-full h-full bg-gradient-to-br from-yellow-100 to-green-100 flex items-center justify-center ${!album.is_public ? 'grayscale' : ''}`}>
                                             <span className="text-4xl">⚽</span>
                                         </div>
                                     )}

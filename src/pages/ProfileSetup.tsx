@@ -17,6 +17,7 @@ export default function ProfileSetup() {
     const [phone, setPhone] = useState('')
     const [city, setCity] = useState('')
     const [state, setState] = useState('')
+    const [isPublic, setIsPublic] = useState(true)
 
     const [file, setFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
@@ -29,7 +30,7 @@ export default function ProfileSetup() {
             const fetchProfile = async () => {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('username, avatar_url, phone, city, state')
+                    .select('username, avatar_url, phone, city, state, is_public')
                     .eq('id', user.id)
                     .single()
 
@@ -42,6 +43,7 @@ export default function ProfileSetup() {
                     if (data.phone) setPhone(data.phone)
                     if (data.city) setCity(data.city)
                     if (data.state) setState(data.state)
+                    if (data.is_public !== undefined) setIsPublic(data.is_public)
                 }
             }
             fetchProfile()
@@ -98,6 +100,7 @@ export default function ProfileSetup() {
                     phone,
                     city,
                     state,
+                    is_public: isPublic,
                     avatar_url: avatarUrl,
                     updated_at: new Date().toISOString(),
                 })
@@ -156,6 +159,24 @@ export default function ProfileSetup() {
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                             />
+                        </div>
+
+                        <div className="flex items-center space-x-2 bg-white p-3 rounded border">
+                            <input
+                                type="checkbox"
+                                id="isPublic"
+                                checked={isPublic}
+                                onChange={(e) => setIsPublic(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <div className="grid gap-1.5 leading-none">
+                                <Label htmlFor="isPublic" className="font-bold">
+                                    Perfil Público
+                                </Label>
+                                <p className="text-sm text-muted-foreground text-gray-500">
+                                    Se desmarcado, você não aparecerá na lista da Comunidade (apenas busca exata).
+                                </p>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
