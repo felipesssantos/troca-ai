@@ -11,6 +11,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import NotificationBell from '@/components/NotificationBell'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useTour } from '@/hooks/useTour'
 
@@ -143,6 +144,7 @@ export default function Header() {
                             <span className="sm:hidden">Trocas</span>
                         </Button>
 
+                        <NotificationBell />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button data-tour="profile-menu" variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -164,6 +166,9 @@ export default function Header() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => navigate('/profile/setup')}>
                                     👤 Editar Perfil
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/my-stores')}>
+                                    🏪 Minhas Lojas
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                                     🚪 Sair

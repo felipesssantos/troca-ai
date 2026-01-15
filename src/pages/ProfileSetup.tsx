@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+// Profile Setup Page
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +20,8 @@ export default function ProfileSetup() {
     const [state, setState] = useState('')
     const [isPublic, setIsPublic] = useState(true)
 
+
+
     const [file, setFile] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -30,7 +33,7 @@ export default function ProfileSetup() {
             const fetchProfile = async () => {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('username, avatar_url, phone, city, state, is_public')
+                    .select('username, avatar_url, phone, city, state, is_public, account_type, store_info')
                     .eq('id', user.id)
                     .single()
 
@@ -121,7 +124,7 @@ export default function ProfileSetup() {
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>Seu Perfil</CardTitle>
-                    <CardDescription>Escolha um nome único e uma foto para o álbum.</CardDescription>
+                    <CardDescription>Configure seus dados para ser encontrado.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSave} className="space-y-6">
@@ -161,24 +164,6 @@ export default function ProfileSetup() {
                             />
                         </div>
 
-                        <div className="flex items-center space-x-2 bg-white p-3 rounded border">
-                            <input
-                                type="checkbox"
-                                id="isPublic"
-                                checked={isPublic}
-                                onChange={(e) => setIsPublic(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <div className="grid gap-1.5 leading-none">
-                                <Label htmlFor="isPublic" className="font-bold">
-                                    Perfil Público
-                                </Label>
-                                <p className="text-sm text-muted-foreground text-gray-500">
-                                    Se desmarcado, você não aparecerá na lista da Comunidade (apenas busca exata).
-                                </p>
-                            </div>
-                        </div>
-
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="city">Cidade</Label>
@@ -201,8 +186,26 @@ export default function ProfileSetup() {
                             </div>
                         </div>
 
+                        <div className="flex items-center space-x-2 bg-white p-3 rounded border">
+                            <input
+                                type="checkbox"
+                                id="isPublic"
+                                checked={isPublic}
+                                onChange={(e) => setIsPublic(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <div className="grid gap-1.5 leading-none">
+                                <Label htmlFor="isPublic" className="font-bold">
+                                    Perfil Público
+                                </Label>
+                                <p className="text-sm text-gray-500">
+                                    Se desmarcado, você não aparecerá na lista da Comunidade.
+                                </p>
+                            </div>
+                        </div>
+
                         <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? 'Salvando...' : 'Entrar no Álbum'}
+                            {loading ? 'Salvando...' : 'Salvar Perfil'}
                         </Button>
                     </form>
                 </CardContent>

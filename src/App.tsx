@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+// Main App Component
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import AuthPage from '@/pages/Auth'
 import ProfileSetup from '@/pages/ProfileSetup'
+import MyStores from '@/pages/MyStores'
+import StoreForm from '@/pages/StoreForm'
 import Album from '@/pages/Album'
 import Community from '@/pages/Community'
 import UserAlbum from '@/pages/UserAlbum'
@@ -18,6 +21,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminAlbums from './pages/admin/AdminAlbums'
 import AdminAlbumForm from './pages/admin/AdminAlbumForm'
 import AdminUsers from './pages/admin/AdminUsers'
+import AdminRequests from './pages/admin/AdminRequests'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
@@ -71,6 +75,22 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/my-stores"
+          element={
+            <PrivateRoute>
+              <MyStores />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/my-stores/:id"
+          element={
+            <PrivateRoute>
+              <StoreForm />
+            </PrivateRoute>
+          }
+        />
         {/* Admin Area */}
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
@@ -78,6 +98,7 @@ function App() {
             <Route path="albums" element={<AdminAlbums />} />
             <Route path="albums/new" element={<AdminAlbumForm />} />
             <Route path="albums/edit/:id" element={<AdminAlbumForm />} />
+            <Route path="requests" element={<AdminRequests />} />
             <Route path="users" element={<AdminUsers />} />
           </Route>
         </Route>

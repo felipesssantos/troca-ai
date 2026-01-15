@@ -26,6 +26,11 @@ function SidebarContent({ className, ...props }: ComponentProps<"div">) {
                         <BookOpen className="mr-2 h-4 w-4" /> Álbuns
                     </Button>
                 </Link>
+                <Link to="/admin/requests">
+                    <Button variant={isActive('/admin/requests') ? 'secondary' : 'ghost'} className={`w-full justify-start hover:text-[#004d25] hover:bg-white/90 ${isActive('/admin/requests') ? 'text-[#004d25]' : 'text-white'}`}>
+                        <BookOpen className="mr-2 h-4 w-4" /> Solicitações
+                    </Button>
+                </Link>
                 <Link to="/admin/users">
                     <Button variant={isActive('/admin/users') ? 'secondary' : 'ghost'} className={`w-full justify-start hover:text-[#004d25] hover:bg-white/90 ${isActive('/admin/users') ? 'text-[#004d25]' : 'text-white'}`}>
                         <Users className="mr-2 h-4 w-4" /> Usuários

@@ -7,7 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { PlusCircle, BookOpen, Eye, EyeOff } from 'lucide-react'
+import { PlusCircle, BookOpen, MoreVertical, Pencil, Eye, EyeOff, RotateCcw } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 // Types
 type AlbumTemplate = {
@@ -34,11 +42,21 @@ export default function Dashboard() {
     const [userAlbums, setUserAlbums] = useState<UserAlbum[]>([])
     const [templates, setTemplates] = useState<AlbumTemplate[]>([])
 
-    // Form State
+    // Create State
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [selectedTemplate, setSelectedTemplate] = useState<string>('')
     const [nickname, setNickname] = useState('')
     const [creating, setCreating] = useState(false)
+
+    // Rename State
+    const [isRenameOpen, setIsRenameOpen] = useState(false)
+    const [albumToRename, setAlbumToRename] = useState<UserAlbum | null>(null)
+    const [newNickname, setNewNickname] = useState('')
+
+    // Request State
+    const [requestMode, setRequestMode] = useState(false)
+    const [reqName, setReqName] = useState('')
+    const [reqDesc, setReqDesc] = useState('')
 
     useEffect(() => {
         if (!user) return
@@ -132,10 +150,67 @@ export default function Dashboard() {
         }
     }
 
-    const toggleAlbumVisibility = async (e: React.MouseEvent, albumId: string, currentStatus: boolean) => {
-        e.stopPropagation() // Prevent card click
-        if (!confirm(`Deseja tornar este álbum ${currentStatus ? 'privado' : 'público'}?`)) return
+    const handleRequestAlbum = async () => {
+        if (!user || !reqName) return
+        setLoading(true)
+        try {
+            const { error } = await supabase
+                .from('album_requests')
+                .insert({
+                    user_id: user.id,
+                    album_name: reqName,
+                    description: reqDesc
+                })
 
+            if (error) throw error
+            if (error) throw error
+            alert('Solicitação enviada com sucesso! \n\nVocê será notificado pelo app (🔔) assim que tivermos novidades sobre seu pedido.')
+            setIsDialogOpen(false)
+            setRequestMode(false)
+            setReqName('')
+            setReqDesc('')
+        } catch (e: any) {
+            alert('Erro: ' + e.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // ACTIONS
+    const handleRenameAlbum = async () => {
+        if (!albumToRename) return
+        try {
+            const { error } = await supabase
+                .from('user_albums')
+                .update({ nickname: newNickname || null })
+                .eq('id', albumToRename.id)
+
+            if (error) throw error
+
+            setUserAlbums(prev => prev.map(a => a.id === albumToRename.id ? { ...a, nickname: newNickname || null } : a))
+            setIsRenameOpen(false)
+        } catch (e: any) {
+            alert('Erro ao renomear: ' + e.message)
+        }
+    }
+
+    const handleResetAlbum = async (e: React.MouseEvent, albumId: string) => {
+        e.stopPropagation()
+        const confirmText = prompt('ATENÇÃO: Você perderá TODAS as figurinhas marcadas neste álbum.\nDigite "RESETAR" para confirmar:')
+        if (confirmText !== 'RESETAR') return
+
+        try {
+            const { error } = await supabase.rpc('reset_album_progress', { p_user_album_id: albumId })
+            if (error) throw error
+            alert('Álbum resetado com sucesso.')
+        } catch (e: any) {
+            alert('Erro ao resetar: ' + e.message)
+        }
+    }
+
+    const toggleAlbumVisibility = async (e: React.MouseEvent, albumId: string, currentStatus: boolean) => {
+        e.stopPropagation()
+        // Logic moved inside Dropdown for better UX, but kept function if needed or call directly
         try {
             const { error } = await supabase
                 .from('user_albums')
@@ -149,6 +224,7 @@ export default function Dashboard() {
             alert('Erro ao atualizar privacidade: ' + err.message)
         }
     }
+
 
     if (loading) {
         return <div className="flex h-screen items-center justify-center">Carregando painel...</div>
@@ -166,45 +242,113 @@ export default function Dashboard() {
                             Novo Álbum
                         </Button>
                     </DialogTrigger>
+
+                    <DialogContent>
+                        {requestMode ? (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Solicitar Novo Álbum</DialogTitle>
+                                    <DialogDescription>
+                                        Informe qual álbum você gostaria de ver no Troca.ai.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                        <Label>Nome do Álbum</Label>
+                                        <Input
+                                            placeholder="Ex: Campeonato Mineiro 2025"
+                                            value={reqName}
+                                            onChange={(e) => setReqName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Descrição / Links (Opcional)</Label>
+                                        <Input
+                                            placeholder="Ex: Álbum virtual oficial..."
+                                            value={reqDesc}
+                                            onChange={(e) => setReqDesc(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setRequestMode(false)}>Voltar</Button>
+                                    <Button onClick={handleRequestAlbum} disabled={!reqName}>Enviar Solicitação</Button>
+                                </DialogFooter>
+                            </>
+                        ) : (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>Adicionar Novo Álbum</DialogTitle>
+                                    <DialogDescription>
+                                        Escolha uma das edições disponíveis para começar sua coleção.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="template">Edição / Modelo</Label>
+                                        <select
+                                            id="template"
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            value={selectedTemplate}
+                                            onChange={(e) => setSelectedTemplate(e.target.value)}
+                                        >
+                                            <option value="" disabled>Selecione um álbum...</option>
+                                            {templates.map(t => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.name} ({t.total_stickers} figs)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="text-center text-sm">
+                                        <span className="text-gray-500">Não encontrou? </span>
+                                        <button
+                                            className="text-blue-600 hover:underline font-medium"
+                                            onClick={() => setRequestMode(true)}
+                                        >
+                                            Solicitar Álbum
+                                        </button>
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="nickname">Apelido (Opcional)</Label>
+                                        <Input
+                                            id="nickname"
+                                            placeholder="Ex: Para Trocas, Do meu filho..."
+                                            value={nickname}
+                                            onChange={(e) => setNickname(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={creating}>Cancelar</Button>
+                                    <Button onClick={handleCreateAlbum} disabled={!selectedTemplate || creating}>
+                                        {creating ? 'Criando...' : 'Adicionar Álbum'}
+                                    </Button>
+                                </DialogFooter>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* RENAME DIALOG */}
+                <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Adicionar Novo Álbum</DialogTitle>
-                            <DialogDescription>
-                                Escolha uma das edições disponíveis para começar sua coleção.
-                            </DialogDescription>
+                            <DialogTitle>Renomear Álbum</DialogTitle>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="template">Edição / Modelo</Label>
-                                <select
-                                    id="template"
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={selectedTemplate}
-                                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                                >
-                                    <option value="" disabled>Selecione um álbum...</option>
-                                    {templates.map(t => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.name} ({t.total_stickers} figs)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="nickname">Apelido (Opcional)</Label>
-                                <Input
-                                    id="nickname"
-                                    placeholder="Ex: Para Trocas, Do meu filho..."
-                                    value={nickname}
-                                    onChange={(e) => setNickname(e.target.value)}
-                                />
-                            </div>
+                        <div className="py-4">
+                            <Label>Novo Apelido</Label>
+                            <Input
+                                value={newNickname}
+                                onChange={(e) => setNewNickname(e.target.value)}
+                                placeholder="Ex: Álbum Principal"
+                            />
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={creating}>Cancelar</Button>
-                            <Button onClick={handleCreateAlbum} disabled={!selectedTemplate || creating}>
-                                {creating ? 'Criando...' : 'Adicionar Álbum'}
-                            </Button>
+                            <Button variant="outline" onClick={() => setIsRenameOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleRenameAlbum}>Salvar</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -229,16 +373,44 @@ export default function Dashboard() {
                                 navigate(`/album/${album.id}`)
                             }}
                         >
-                            <div className="absolute top-2 right-2 z-10">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 bg-white/80 hover:bg-white shadow-sm rounded-full"
-                                    onClick={(e) => toggleAlbumVisibility(e, album.id, album.is_public)}
-                                    title={album.is_public ? "Público (Visível para todos)" : "Privado (Oculto)"}
-                                >
-                                    {album.is_public ? <Eye size={16} className="text-green-600" /> : <EyeOff size={16} className="text-gray-400" />}
-                                </Button>
+                            {/* ACTIONS DROPDOWN */}
+                            <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/80 hover:bg-white shadow-sm rounded-full">
+                                            <MoreVertical size={16} className="text-gray-600" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Opções do Álbum</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+
+                                        <DropdownMenuItem onClick={(e) => toggleAlbumVisibility(e, album.id, album.is_public)}>
+                                            {album.is_public ? (
+                                                <><EyeOff size={16} className="mr-2" /> Tornar Privado</>
+                                            ) : (
+                                                <><Eye size={16} className="mr-2" /> Tornar Público</>
+                                            )}
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem onClick={() => {
+                                            setAlbumToRename(album)
+                                            setNewNickname(album.nickname || '')
+                                            setIsRenameOpen(true)
+                                        }}>
+                                            <Pencil size={16} className="mr-2" /> Renomear
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuSeparator />
+
+                                        <DropdownMenuItem
+                                            className="text-red-600 focus:text-red-600"
+                                            onClick={(e) => handleResetAlbum(e, album.id)}
+                                        >
+                                            <RotateCcw size={16} className="mr-2" /> Resetar (Limpar)
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
                             <CardHeader className="pb-4">
