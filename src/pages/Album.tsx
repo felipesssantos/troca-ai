@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useParams } from 'react-router-dom'
-import { ChevronDown, ChevronRight, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, Share2 } from 'lucide-react'
 
 interface StickerMetadata {
     sticker_number: number
@@ -25,6 +26,7 @@ export default function Album() {
     const [metadata, setMetadata] = useState<StickerMetadata[]>([])
     const [loading, setLoading] = useState(true)
     const [totalStickers, setTotalStickers] = useState(670)
+    const [albumName, setAlbumName] = useState('')
     const [filter, setFilter] = useState<'all' | 'missing' | 'repeated'>('all')
 
     // UI State
@@ -41,20 +43,20 @@ export default function Album() {
             // 1. Get Album Info
             const { data: albumData } = await supabase
                 .from('user_albums')
-                .select('album_template_id, albums(total_stickers)')
+                .select('nickname, album_template_id, albums(name, total_stickers)')
                 .eq('id', albumId)
                 .single()
 
             if (albumData?.albums) {
                 // @ts-ignore
                 setTotalStickers(albumData.albums.total_stickers)
+                // @ts-ignore
+                const name = albumData.albums.name
+                const nick = albumData.nickname
+                setAlbumName(nick ? `${name} - ${nick}` : name)
             }
 
             // 2. Get Metadata (Sticker Codes & Sections)
-            // We join with the user's template ID, but for now assuming global stickers for this template
-            // Since we passed the albumId, we can find the template.
-            // Actually, stickers are linked to 'albums' (template), not 'user_albums'.
-            // So we need album_template_id.
             if (albumData?.album_template_id) {
                 const { data: metaData } = await supabase
                     .from('stickers')
@@ -118,6 +120,24 @@ export default function Album() {
             ...prev,
             [section]: !prev[section]
         }))
+    }
+
+    const handleShareRepeated = () => {
+        const repeated = Object.entries(userDistricts)
+            .filter(([_, count]) => count > 1)
+            .map(([num]) => num)
+            .sort((a, b) => Number(a) - Number(b))
+
+        if (repeated.length === 0) {
+            alert('Você não tem figurinhas repetidas neste álbum para compartilhar.')
+            return
+        }
+
+        const text = `Olha minhas repetidas do álbum ${albumName}:\n${repeated.join(', ')}`
+
+        navigator.clipboard.writeText(text)
+            .then(() => alert('Lista de repetidas copiada para a área de transferência!'))
+            .catch(() => alert('Erro ao copiar.'))
     }
 
     // Stats
@@ -231,6 +251,20 @@ export default function Album() {
         <div className="min-h-screen bg-gray-50 pb-20">
             {/* Header Stats & Tools */}
             <div className="max-w-6xl mx-auto pt-4 px-4 sticky top-0 bg-gray-50 z-10 pb-2 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="p-0 hover:bg-transparent text-gray-400 -ml-1">
+                            <ChevronDown className="rotate-90 h-5 w-5" />
+                        </Button>
+                        <h1 className="text-xl font-bold text-gray-800 truncate leading-tight max-w-[200px] sm:max-w-md">
+                            {albumName}
+                        </h1>
+                    </div>
+                    <Button variant="ghost" onClick={handleShareRepeated} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2">
+                        <span className="hidden sm:inline text-sm font-medium">Compartilhar Repetidas</span>
+                        <Share2 className="h-4 w-4" />
+                    </Button>
+                </div>
 
                 <div className="flex gap-4 text-sm justify-between bg-white border p-3 rounded-lg shadow-sm">
                     <div className="text-center">

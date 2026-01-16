@@ -93,11 +93,14 @@ export default function UserAlbum() {
 
             if (data && data.length > 0) {
                 setMyAlbums(data as any)
-                setSelectedAlbumId(data[0].id) // Default to first
+                setSelectedAlbumId(prev => {
+                    const valid = data.find((a: any) => a.id === prev)
+                    return valid ? prev : data[0].id
+                })
             }
         }
         fetchMyAlbums()
-    }, [currentUser])
+    }, [currentUser?.id])
 
     // 2. Main Data Fetching
     useEffect(() => {
@@ -260,7 +263,7 @@ export default function UserAlbum() {
             }
         }
         fetchData()
-    }, [username, currentUser, navigate, selectedAlbumId, selectedTargetAlbumId])
+    }, [username, currentUser?.id, navigate, selectedAlbumId, selectedTargetAlbumId])
 
 
     // Handlers
