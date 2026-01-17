@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Trash2 } from 'lucide-react'
+import { formatPhone } from '@/lib/utils'
 
 // Types
 interface StoreData {
@@ -63,6 +64,20 @@ export default function StoreForm() {
             const { data: tmpls } = await supabase.from('albums').select('id, name')
             if (tmpls) setTemplates(tmpls)
 
+            // Limit Check: If creating new, check if user already has a store
+            if (!isEditing) {
+                const { count } = await supabase
+                    .from('stores')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('owner_id', user.id)
+
+                if (count && count >= 1) {
+                    alert('Você já possui uma loja cadastrada. O limite é de 1 loja por usuário.')
+                    navigate('/my-stores')
+                    return
+                }
+            }
+
             // B. If Editing, fetch Store + Stock
             if (isEditing) {
                 const { data: store } = await supabase
@@ -94,6 +109,13 @@ export default function StoreForm() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!user) return
+
+        // Validate WhatsApp Length
+        if (formData.whatsapp.length < 15) {
+            alert('O WhatsApp deve ter 11 dígitos (formato celular).')
+            return
+        }
+
         setLoading(true)
 
         try {
@@ -102,7 +124,8 @@ export default function StoreForm() {
             // 1. Upsert Store
             const storePayload = {
                 owner_id: user.id,
-                ...formData
+                ...formData,
+                whatsapp: formData.whatsapp.replace(/\D/g, '') // Only numbers
             }
 
             if (isEditing) {
@@ -226,15 +249,14 @@ export default function StoreForm() {
                                         <Input value={formData.instagram} onChange={e => setFormData({ ...formData, instagram: e.target.value })} placeholder="@instagram" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>WhatsApp (Opcional)</Label>
+                                        <Label>WhatsApp</Label>
                                         <Input
+                                            required
+                                            minLength={15}
+                                            maxLength={15}
                                             value={formData.whatsapp}
                                             onChange={e => {
-                                                // Allow only numbers, spaces, dashes, parenthesis
-                                                const val = e.target.value
-                                                if (/^[\d\s()+-]*$/.test(val)) {
-                                                    setFormData({ ...formData, whatsapp: val })
-                                                }
+                                                setFormData({ ...formData, whatsapp: formatPhone(e.target.value) })
                                             }}
                                             placeholder="(11) 99999-9999"
                                         />

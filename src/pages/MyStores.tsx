@@ -44,9 +44,12 @@ export default function MyStores() {
                         <h1 className="text-2xl font-bold">Minhas Lojas</h1>
                         <p className="text-muted-foreground">Gerencie seus pontos de troca.</p>
                     </div>
-                    <Button onClick={() => navigate('/my-stores/new')} className="bg-indigo-600 hover:bg-indigo-700">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Nova Loja
-                    </Button>
+                    {/* Limit to 1 store per user */}
+                    {!loading && stores.length === 0 && (
+                        <Button onClick={() => navigate('/my-stores/new')} className="bg-indigo-600 hover:bg-indigo-700">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Nova Loja
+                        </Button>
+                    )}
                 </div>
 
                 {loading ? (
@@ -92,6 +95,6 @@ export default function MyStores() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }
