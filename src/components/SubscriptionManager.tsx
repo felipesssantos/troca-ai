@@ -43,53 +43,18 @@ export function SubscriptionManager() {
     }, [open])
 
     const handleData = async () => {
-        if (stripeId) {
-            // Stripe Portal
-            setLoading(true)
-            try {
-                const { data, error } = await supabase.functions.invoke('create-stripe-portal', {
-                    body: { user_id: user?.id }
-                })
-                if (error) throw error
-                if (data?.url) window.location.href = data.url
-            } catch (err: any) {
-                toast({
-                    title: "Erro",
-                    description: "Não foi possível abrir o portal.",
-                    variant: "destructive"
-                })
-            } finally {
-                setLoading(false)
-            }
-        } else {
-            // Legacy Asaas Cancel
-            handleCancel()
-        }
-    }
-
-    const handleCancel = async () => {
-        if (!confirm('Tem certeza? Você continuará Premium até o fim do período, mas não será cobrado novamente.')) return
-
+        // Stripe Portal Only
         setLoading(true)
         try {
-            const { error } = await supabase.functions.invoke('cancel-subscription', {
+            const { data, error } = await supabase.functions.invoke('create-stripe-portal', {
                 body: { user_id: user?.id }
             })
-
-            if (error) {
-                const msg = await error.context.json()
-                throw new Error(msg.error || 'Erro ao cancelar')
-            }
-
-            toast({
-                title: "Assinatura Cancelada",
-                description: "Sua renovação automática foi desligada.",
-            })
-            fetchStatus() // Refresh
+            if (error) throw error
+            if (data?.url) window.location.href = data.url
         } catch (err: any) {
             toast({
-                title: "Erro no cancelamento",
-                description: err.message,
+                title: "Erro",
+                description: "Não foi possível abrir o portal.",
                 variant: "destructive"
             })
         } finally {
