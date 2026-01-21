@@ -179,6 +179,9 @@ export default function Header() {
                                 <DropdownMenuItem onClick={() => navigate('/terms')}>
                                     📜 Termos de Uso
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/update-password')}>
+                                    🔒 Alterar Senha
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                                     🚪 Sair
