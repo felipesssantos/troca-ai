@@ -67,7 +67,43 @@ export default function ProfileSetup() {
         }
     }, [user])
 
-    // ... (Debounced Username Check - KEEP AS IS) ...
+    // Debounced Username Check
+    useEffect(() => {
+        // Reset states when user types
+        setIsUsernameValid(false)
+        setUsernameError(null)
+
+        if (!username || username.length < 3) return
+
+        setIsCheckingUsername(true)
+
+        const timer = setTimeout(async () => {
+            if (!user) return
+
+            try {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('username', username)
+                    .neq('id', user.id) // Exclude myself
+                    .maybeSingle()
+
+                if (data) {
+                    setUsernameError('Este nome de usuário já está em uso.')
+                    setIsUsernameValid(false)
+                } else {
+                    setUsernameError(null)
+                    setIsUsernameValid(true)
+                }
+            } catch (error) {
+                console.error('Error checking username:', error)
+            } finally {
+                setIsCheckingUsername(false)
+            }
+        }, 500) // 500ms delay
+
+        return () => clearTimeout(timer)
+    }, [username, user])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {

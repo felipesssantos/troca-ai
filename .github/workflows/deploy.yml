@@ -57,6 +57,10 @@ jobs:
           export VITE_MINIO_ENDPOINT="${{ secrets.VITE_MINIO_ENDPOINT }}"
           export VITE_MINIO_ACCESS_KEY="${{ secrets.VITE_MINIO_ACCESS_KEY }}"
           export VITE_MINIO_SECRET_KEY="${{ secrets.VITE_MINIO_SECRET_KEY }}"
+          export VITE_MINIO_SECRET_KEY="${{ secrets.VITE_MINIO_SECRET_KEY }}"
+          
+          # Enable Docker BuildKit to avoid legacy builder warning
+          export DOCKER_BUILDKIT=1
 
           echo "Building Docker Image..."
           docker build \

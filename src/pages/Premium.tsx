@@ -6,7 +6,6 @@ import { useToast } from '@/components/ui/use-toast'
 import { Check, Star, Zap, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import Header from '@/components/Header'
 
 export default function Premium() {
     const navigate = useNavigate()
