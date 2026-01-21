@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useTour } from '@/hooks/useTour'
-import { MapPin, Clock, Instagram, Store, Layers, Ticket, Loader2, Phone, ChevronRight, Lock } from 'lucide-react'
+import { MapPin, Clock, Instagram, Store, Layers, Ticket, Loader2, Phone, ChevronRight, Lock, Bot } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 interface Item {
@@ -266,10 +266,10 @@ export default function Community() {
                         Colecionadores
                     </button>
                     <button
-                        className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'matches' ? 'bg-white shadow text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === 'matches' ? 'bg-white shadow text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('matches')}
                     >
-                        Smart Match ✨
+                        AI Match <Bot size={16} />
                     </button>
                     <button
                         className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'stores' ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'}`}
@@ -336,7 +336,7 @@ export default function Community() {
                                 ) : matches.length === 0 ? (
                                     <Card>
                                         <CardContent className="p-8 text-center text-gray-500">
-                                            <p className="text-lg">Nenhum "Smart Match" encontrado ainda.</p>
+                                            <p className="text-lg">Nenhum "AI Match" encontrado ainda.</p>
                                             <p className="text-sm mt-2">Isso acontece quando ninguém tem o que você quer E quer o que você tem ao mesmo tempo.</p>
                                         </CardContent>
                                     </Card>
@@ -408,7 +408,7 @@ export default function Community() {
                                     </div>
                                     <div>
                                         <h3 className="text-xl font-bold text-gray-900">Funcionalidade Premium</h3>
-                                        <p className="text-sm text-gray-500 mt-1">Desbloqueie o poder do Smart Match</p>
+                                        <p className="text-sm text-gray-500 mt-1">Desbloqueie o poder do AI Match</p>
                                     </div>
 
                                     {loadingMatches ? (
@@ -421,7 +421,7 @@ export default function Community() {
                                         </div>
                                     ) : (
                                         <p className="text-gray-600">
-                                            O <span className="font-semibold">Smart Match</span> cruza seus dados com toda a comunidade e encontra quem quer trocar exatamente com você.
+                                            O <span className="font-semibold">AI Match</span> cruza seus dados com toda a comunidade e encontra quem quer trocar exatamente com você.
                                         </p>
                                     )}
 

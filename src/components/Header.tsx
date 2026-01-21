@@ -168,6 +168,9 @@ export default function Header() {
                                 <DropdownMenuItem onClick={() => navigate('/profile/setup')}>
                                     👤 Editar Perfil
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/update-password')}>
+                                    🔒 Alterar Senha
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => navigate('/my-stores')}>
                                     🏪 Minhas Lojas
                                 </DropdownMenuItem>
@@ -178,9 +181,6 @@ export default function Header() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => navigate('/terms')}>
                                     📜 Termos de Uso
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate('/update-password')}>
-                                    🔒 Alterar Senha
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
