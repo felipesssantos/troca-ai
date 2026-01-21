@@ -9,9 +9,12 @@ import MyStores from '@/pages/MyStores'
 import StoreForm from '@/pages/StoreForm'
 import Album from '@/pages/Album'
 import Community from '@/pages/Community'
+import Dashboard from '@/pages/Dashboard'
 import UserAlbum from '@/pages/UserAlbum'
 import Trades from '@/pages/Trades'
-import Dashboard from '@/pages/Dashboard'
+import Premium from '@/pages/Premium'
+import FAQ from '@/pages/FAQ'
+import Terms from '@/pages/Terms'
 import Header from '@/components/Header'
 
 // Admin Imports
@@ -137,10 +140,34 @@ function App() {
           }
         />
         <Route
+          path="/premium"
+          element={
+            <PrivateRoute>
+              <Premium />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/trades"
           element={
             <PrivateRoute>
               <Trades />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/faq"
+          element={
+            <PrivateRoute>
+              <FAQ />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <PrivateRoute>
+              <Terms />
             </PrivateRoute>
           }
         />

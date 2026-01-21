@@ -425,7 +425,10 @@ export default function Community() {
                                         </p>
                                     )}
 
-                                    <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-6 text-lg shadow-lg hover:shadow-xl transition-all">
+                                    <Button
+                                        onClick={() => navigate('/premium')}
+                                        className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+                                    >
                                         <span className="md:hidden">Seja Premium 🚀</span>
                                         <span className="hidden md:inline">Seja Premium e Troque Agora 🚀</span>
                                     </Button>

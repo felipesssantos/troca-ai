@@ -110,6 +110,36 @@ export default function Dashboard() {
 
     const handleCreateAlbum = async () => {
         if (!user || !selectedTemplate) return
+
+        // 1. Check Limits (Free vs Premium)
+        try {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_premium')
+                .eq('id', user.id)
+                .single()
+
+            const isPremium = profile?.is_premium || false
+
+            if (!isPremium) {
+                // Check Global Limit (Max 3)
+                if (userAlbums.length >= 3) {
+                    navigate('/premium')
+                    return
+                }
+
+                // Check Template Limit (Max 1 of this edition)
+                const alreadyHasTemplate = userAlbums.some(a => a.album_template_id === selectedTemplate)
+                if (alreadyHasTemplate) {
+                    alert('Usuários Grátis só podem ter 1 álbum de cada edição. Seja Premium para ter ilimitados!')
+                    navigate('/premium')
+                    return
+                }
+            }
+        } catch (err) {
+            console.error('Error checking limits', err)
+        }
+
         setCreating(true)
 
         try {

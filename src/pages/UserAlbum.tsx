@@ -287,6 +287,27 @@ export default function UserAlbum() {
 
         setLoading(true)
         try {
+            // 1. Check Premium Limits
+            const { data: profile } = await supabase.from('profiles').select('is_premium').eq('id', currentUser.id).single()
+            const isPremium = profile?.is_premium || false
+
+            if (!isPremium) {
+                // Count PENDING trades sent by me
+                const { count, error } = await supabase
+                    .from('trades')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('sender_id', currentUser.id)
+                    .eq('status', 'pending')
+
+                if (error) throw error
+
+                if ((count || 0) >= 3) {
+                    alert('Você atingiu o limite de 3 trocas simultâneas do plano Grátis. Finalize algumas ou vire Premium!')
+                    navigate('/premium')
+                    return
+                }
+            }
+
             const { error } = await supabase
                 .from('trades')
                 .insert({

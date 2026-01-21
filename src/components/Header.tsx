@@ -12,6 +12,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import NotificationBell from '@/components/NotificationBell'
+import { SubscriptionManager } from '@/components/SubscriptionManager'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useTour } from '@/hooks/useTour'
 
@@ -170,6 +171,15 @@ export default function Header() {
                                 <DropdownMenuItem onClick={() => navigate('/my-stores')}>
                                     🏪 Minhas Lojas
                                 </DropdownMenuItem>
+                                <SubscriptionManager />
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => navigate('/faq')}>
+                                    ❓ Perguntas Frequentes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/terms')}>
+                                    📜 Termos de Uso
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                                     🚪 Sair
                                 </DropdownMenuItem>
