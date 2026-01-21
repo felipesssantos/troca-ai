@@ -129,7 +129,7 @@ export function SubscriptionManager() {
                         </p>
                     )}
 
-                    {status === 'active' ? (
+                    {status === 'active' || (validUntil && new Date(validUntil) > new Date() && stripeId) ? (
                         <Button
                             variant={stripeId ? "outline" : "destructive"}
                             className="w-full"
