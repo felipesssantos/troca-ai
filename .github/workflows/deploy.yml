@@ -75,7 +75,7 @@ jobs:
           echo "Starting new container..."
           docker run -d \
             --name troca-ai-app \
-            -p 80:80 \
+            -p 3001:80 \
             --restart always \
             troca-ai-app
 
