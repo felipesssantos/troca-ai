@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Repeat, Zap, Shield, Rocket } from 'lucide-react'
+import { Helmet } from 'react-helmet-async'
 
 export default function LandingPage() {
     const handleLogin = () => {
@@ -15,6 +16,25 @@ export default function LandingPage() {
 
     return (
         <div className="min-h-screen bg-white text-gray-900 flex flex-col font-sans">
+            <Helmet>
+                <title>Troca Aí - Complete seu álbum com Inteligência Artificial</title>
+                <meta name="description" content="O Troca Aí gerencia suas figurinhas repetidas e encontra a troca perfeita para você usando Inteligência Artificial. Complete seu álbum de forma fácil e segura." />
+
+                {/* Facebook / Open Graph */}
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content="https://trocaai.net/" />
+                <meta property="og:title" content="Troca Aí - Complete seu álbum com Inteligência Artificial" />
+                <meta property="og:description" content="Esqueça as listas de papel. O Troca Aí encontra a troca perfeita para você." />
+                <meta property="og:image" content="https://trocaai.net/og-image.jpg" />
+
+                {/* Twitter */}
+                <meta property="twitter:card" content="summary_large_image" />
+                <meta property="twitter:url" content="https://trocaai.net/" />
+                <meta property="twitter:title" content="Troca Aí - Complete seu álbum com Inteligência Artificial" />
+                <meta property="twitter:description" content="Esqueça as listas de papel. O Troca Aí encontra a troca perfeita para você." />
+                <meta property="twitter:image" content="https://trocaai.net/og-image.jpg" />
+            </Helmet>
+
             {/* Navbar */}
             <header className="py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-gray-100 relative">
                 <div className="flex items-center gap-2 invisible">

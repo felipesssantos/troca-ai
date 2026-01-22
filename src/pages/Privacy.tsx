@@ -1,6 +1,12 @@
+import { Helmet } from 'react-helmet-async'
+
 export default function Privacy() {
     return (
         <div className="container mx-auto py-10 px-4 max-w-4xl text-gray-700">
+            <Helmet>
+                <title>Política de Privacidade - Troca Aí</title>
+                <meta name="description" content="Política de Privacidade do Troca Aí. Saiba como protegemos seus dados e garantimos sua segurança." />
+            </Helmet>
             <h1 className="text-3xl font-bold mb-6 text-gray-900">Política de Privacidade</h1>
 
             <div className="space-y-6">
