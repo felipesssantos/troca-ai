@@ -15,7 +15,9 @@ import Trades from '@/pages/Trades'
 import Premium from '@/pages/Premium'
 import FAQ from '@/pages/FAQ'
 import Terms from '@/pages/Terms'
+import Privacy from '@/pages/Privacy'
 import UpdatePassword from '@/pages/UpdatePassword'
+import LandingPage from '@/pages/Landing'
 import Header from '@/components/Header'
 
 // Admin Imports
@@ -40,6 +42,17 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   )
 }
 
+function HomeDispatcher() {
+  const host = window.location.hostname
+  const isApp = host.startsWith('app.')
+
+  if (isApp) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <LandingPage />
+}
+
 function App() {
   const { setSession } = useAuthStore()
   const [authInitialized, setAuthInitialized] = useState(false)
@@ -54,26 +67,10 @@ function App() {
     // 2. Listen for changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       // Ensure we mark as initialized if an event fires accurately
       setAuthInitialized(true)
-
-      if (event === 'PASSWORD_RECOVERY') {
-        // Redirect to update password page
-        // Note: The router isn't available outside the component render, 
-        // so we rely on the component re-rendering or we can use window.location if needed,
-        // but typically the session is established and we can just let the user navigate
-        // or we can force a redirect if we had access to navigate() here.
-        // However, since we are inside App component, we can't easily use navigate hook here 
-        // without refactoring. 
-        // Users clicking the link will land on the app, session is set, 
-        // and if we want to force them to the update page we can do it via a useEffect check or
-        // simply trust they will follow the flow.
-        // BETTER APPROACH: The `resetPasswordForEmail` had `redirectTo` pointing to /update-password,
-        // so the browser should land there naturally if the link is correct. 
-        // We just need to ensure the Route exists.
-      }
     })
 
     return () => subscription.unsubscribe()
@@ -126,6 +123,10 @@ function App() {
         {/* User Area */}
         <Route
           path="/"
+          element={<HomeDispatcher />}
+        />
+        <Route
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
@@ -185,6 +186,14 @@ function App() {
           element={
             <PrivateRoute>
               <Terms />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <PrivateRoute>
+              <Privacy />
             </PrivateRoute>
           }
         />
