@@ -29,6 +29,8 @@ import AdminAlbumForm from './pages/admin/AdminAlbumForm'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminRequests from './pages/admin/AdminRequests'
 
+import PublicLayout from './layouts/PublicLayout'
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
   if (!session) return <Navigate to="/auth" replace />
@@ -173,30 +175,14 @@ function App() {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/faq"
-          element={
-            <PrivateRoute>
-              <FAQ />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <PrivateRoute>
-              <Terms />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/privacy"
-          element={
-            <PrivateRoute>
-              <Privacy />
-            </PrivateRoute>
-          }
-        />
+
+        {/* Public Pages Layout */}
+        <Route element={<PublicLayout />}>
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/faq" element={<FAQ />} />
+        </Route>
+
         <Route
           path="/update-password"
           element={
