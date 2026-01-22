@@ -59,38 +59,39 @@ export default function LandingPage() {
                         <Button size="lg" variant="outline" className="h-12 px-8 text-lg border-gray-200 hover:bg-gray-50" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
                             Saber mais
                         </Button>
+                    </div>
 
-                        {/* Abstract UI representation / Mockup placeholder */}
-                        <div className="mt-16 relative mx-auto max-w-5xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 bg-white p-2">
-                            <div className="bg-gray-100 rounded-lg aspect-[16/9] flex items-center justify-center relative overflow-hidden">
-                                {/* Simple UI Mockup using CSS/Divs to match minimalist style */}
-                                <div className="absolute inset-x-0 top-0 h-12 bg-white border-b flex items-center px-4 gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                    {/* Abstract UI representation / Mockup placeholder */}
+                    <div className="mt-16 relative mx-auto max-w-5xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 bg-white p-2">
+                        <div className="bg-gray-100 rounded-lg aspect-[16/9] flex items-center justify-center relative overflow-hidden">
+                            {/* Simple UI Mockup using CSS/Divs to match minimalist style */}
+                            <div className="absolute inset-x-0 top-0 h-12 bg-white border-b flex items-center px-4 gap-2">
+                                <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-6 p-12 pt-20 w-full h-full text-left opacity-80">
+                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
+                                    <div className="w-12 h-12 bg-green-100 rounded-full mb-4"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                    <div className="h-3 bg-gray-100 rounded w-1/2"></div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-6 p-12 pt-20 w-full h-full text-left opacity-80">
-                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
-                                        <div className="w-12 h-12 bg-green-100 rounded-full mb-4"></div>
-                                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                        <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48 border-2 border-green-500 relative">
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded">AI Match</div>
+                                    <div className="flex justify-between mb-4">
+                                        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
                                     </div>
-                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48 border-2 border-green-500 relative">
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded">AI Match</div>
-                                        <div className="flex justify-between mb-4">
-                                            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                                            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                                        </div>
-                                        <div className="flex justify-center items-center h-20 text-green-600 font-bold">Troca Confirmada</div>
-                                    </div>
-                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
-                                        <div className="w-full h-24 bg-gray-100 rounded mb-4"></div>
-                                        <div className="h-4 bg-gray-200 rounded w-full"></div>
-                                    </div>
+                                    <div className="flex justify-center items-center h-20 text-green-600 font-bold">Troca Confirmada</div>
+                                </div>
+                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
+                                    <div className="w-full h-24 bg-gray-100 rounded mb-4"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-full"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
             </section>
 
             {/* Features Section */}
