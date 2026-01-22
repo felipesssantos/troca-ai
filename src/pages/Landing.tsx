@@ -228,7 +228,7 @@ export default function LandingPage() {
                     <p className="text-gray-400 text-lg">
                         Junte-se a milhares de colecionadores que já estão trocando figurinhas de forma inteligente.
                     </p>
-                    <Button size="lg" className="bg-green-500 hover:bg-green-600 text-gray-900 font-bold h-14 px-10 text-xl rounded-full" onClick={handleWebapp}>
+                    <Button size="lg" className="bg-green-500 hover:bg-green-600 text-gray-900 font-bold h-14 px-10 text-xl rounded-full" onClick={() => handleWebapp()}>
                         Começar Agora Grátis
                     </Button>
                     <p className="text-xs text-gray-500">Não é necessário cartão de crédito.</p>
