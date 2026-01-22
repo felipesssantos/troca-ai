@@ -1,6 +1,12 @@
+import { Helmet } from 'react-helmet-async'
+
 export default function Terms() {
     return (
         <div className="container mx-auto py-10 px-4 max-w-4xl text-gray-700">
+            <Helmet>
+                <title>Termos de Uso - Troca Aí</title>
+                <meta name="description" content="Termos de Uso e Política de Privacidade do Troca Aí. Leia nossos termos para entender seus direitos e deveres na plataforma." />
+            </Helmet>
             <h1 className="text-3xl font-bold mb-6 text-gray-900">Termos de Uso e Política de Privacidade</h1>
 
             <div className="space-y-6">
