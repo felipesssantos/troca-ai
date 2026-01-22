@@ -68,14 +68,23 @@ jobs:
             --build-arg VITE_MINIO_SECRET_KEY="$VITE_MINIO_SECRET_KEY" \
             -t troca-ai-app .
 
-          echo "Stopping old container..."
+          echo "Stopping old containers..."
           docker stop troca-ai-app || true
           docker rm troca-ai-app || true
+          docker stop troca-ai-landing || true
+          docker rm troca-ai-landing || true
 
-          echo "Starting new container..."
+          echo "Starting App container (Port 3001)..."
           docker run -d \
             --name troca-ai-app \
             -p 3001:80 \
+            --restart always \
+            troca-ai-app
+
+          echo "Starting Landing container (Port 3002)..."
+          docker run -d \
+            --name troca-ai-landing \
+            -p 3002:80 \
             --restart always \
             troca-ai-app
 
