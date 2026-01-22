@@ -37,7 +37,11 @@ export default function AuthPage() {
                     password,
                 })
                 if (error) throw error
-                navigate('/')
+
+                // Check if there is a redirect param
+                const params = new URLSearchParams(window.location.search)
+                const redirect = params.get('redirect')
+                navigate(redirect || '/')
             } else if (view === 'forgot_password') {
                 const { error } = await supabase.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/update-password`,

@@ -1,25 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useNavigate } from 'react-router-dom'
 import { Repeat, Zap, Shield, Rocket } from 'lucide-react'
 
 export default function LandingPage() {
-    // Determine where to redirect based on hostname (although this page is for the landing domain)
-    // If we are here, we are likely on the landing domain.
-    // The "Enter" button should take to the app domain.
-    // Assuming for now simple navigation or external link if domains are strictly separated.
-    // For this implementation, we assume we are handling everything in the same SPA but logically separated.
-    const navigate = useNavigate()
-
     const handleLogin = () => {
-        // If we are using subdomains properly, this should be:
-        // window.location.href = 'https://app.trocaai.net/auth'
-        // For development/testing or single domain, we simulate:
-        navigate('/auth')
+        window.location.href = 'https://app.trocaai.net/auth'
     }
 
-    const handleWebapp = () => {
-        navigate('/auth')
+    const handleWebapp = (path?: string) => {
+        const baseUrl = 'https://app.trocaai.net/auth'
+        const target = path ? `${baseUrl}?redirect=${path}` : baseUrl
+        window.location.href = target
     }
 
     return (
@@ -39,7 +30,7 @@ export default function LandingPage() {
                     <Button variant="ghost" className="text-gray-600 hover:text-green-600" onClick={handleLogin}>
                         Entrar
                     </Button>
-                    <Button className="bg-green-600 hover:bg-green-700 text-white font-bold" onClick={handleWebapp}>
+                    <Button className="bg-green-600 hover:bg-green-700 text-white font-bold" onClick={() => handleWebapp()}>
                         Começar Agora
                     </Button>
                 </div>
@@ -62,45 +53,44 @@ export default function LandingPage() {
                         Esqueça as listas de papel e planilhas confusas. O Troca Aí gerencia suas figurinhas repetidas e encontra a troca perfeita para você.
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white h-12 px-8 text-lg shadow-lg hover:shadow-xl transition-all" onClick={handleWebapp}>
+                        <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white h-12 px-8 text-lg shadow-lg hover:shadow-xl transition-all" onClick={() => handleWebapp()}>
                             Criar Conta Grátis
                         </Button>
                         <Button size="lg" variant="outline" className="h-12 px-8 text-lg border-gray-200 hover:bg-gray-50" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
                             Saber mais
                         </Button>
-                    </div>
 
-                    {/* Abstract UI representation / Mockup placeholder */}
-                    <div className="mt-16 relative mx-auto max-w-5xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 bg-white p-2">
-                        <div className="bg-gray-100 rounded-lg aspect-[16/9] flex items-center justify-center relative overflow-hidden">
-                            {/* Simple UI Mockup using CSS/Divs to match minimalist style */}
-                            <div className="absolute inset-x-0 top-0 h-12 bg-white border-b flex items-center px-4 gap-2">
-                                <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                                <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-6 p-12 pt-20 w-full h-full text-left opacity-80">
-                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
-                                    <div className="w-12 h-12 bg-green-100 rounded-full mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                    <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                        {/* Abstract UI representation / Mockup placeholder */}
+                        <div className="mt-16 relative mx-auto max-w-5xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 bg-white p-2">
+                            <div className="bg-gray-100 rounded-lg aspect-[16/9] flex items-center justify-center relative overflow-hidden">
+                                {/* Simple UI Mockup using CSS/Divs to match minimalist style */}
+                                <div className="absolute inset-x-0 top-0 h-12 bg-white border-b flex items-center px-4 gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
                                 </div>
-                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48 border-2 border-green-500 relative">
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded">AI Match</div>
-                                    <div className="flex justify-between mb-4">
-                                        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                                        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                <div className="grid grid-cols-3 gap-6 p-12 pt-20 w-full h-full text-left opacity-80">
+                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
+                                        <div className="w-12 h-12 bg-green-100 rounded-full mb-4"></div>
+                                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                        <div className="h-3 bg-gray-100 rounded w-1/2"></div>
                                     </div>
-                                    <div className="flex justify-center items-center h-20 text-green-600 font-bold">Troca Confirmada</div>
-                                </div>
-                                <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
-                                    <div className="w-full h-24 bg-gray-100 rounded mb-4"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48 border-2 border-green-500 relative">
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded">AI Match</div>
+                                        <div className="flex justify-between mb-4">
+                                            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                        </div>
+                                        <div className="flex justify-center items-center h-20 text-green-600 font-bold">Troca Confirmada</div>
+                                    </div>
+                                    <div className="col-span-1 bg-white p-4 rounded shadow-sm h-48">
+                                        <div className="w-full h-24 bg-gray-100 rounded mb-4"></div>
+                                        <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
             </section>
 
             {/* Features Section */}
@@ -168,6 +158,63 @@ export default function LandingPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Premium Section */}
+            <section id="premium" className="py-20 bg-white">
+                <div className="max-w-6xl mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Escolha seu plano</h2>
+                        <p className="text-gray-500 mt-4 max-w-xl mx-auto">
+                            Comece grátis e evolua sua coleção quando quiser.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+                        {/* Free Plan */}
+                        <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col">
+                            <CardHeader>
+                                <CardTitle className="text-2xl font-bold text-gray-900">Gratuito</CardTitle>
+                                <p className="text-3xl font-extrabold mt-2">R$ 0<span className="text-sm font-normal text-gray-500">/mês</span></p>
+                            </CardHeader>
+                            <CardContent className="flex-1 flex flex-col">
+                                <ul className="space-y-4 text-gray-600 mb-8 flex-1">
+                                    <li className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full" /> Até 3 Álbuns ativos</li>
+                                    <li className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full" /> Trocas ilimitadas</li>
+                                    <li className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full" /> Acesso à comunidade</li>
+                                </ul>
+                                <Button variant="outline" className="w-full h-12 text-lg font-bold border-gray-200 mt-auto" onClick={() => handleWebapp()}>
+                                    Começar Grátis
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        {/* Premium Plan */}
+                        <Card className="border-2 border-green-500 shadow-lg relative overflow-hidden h-full flex flex-col">
+                            <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">MAIS POPULAR</div>
+                            <CardHeader>
+                                <CardTitle className="text-2xl font-bold text-green-700">Premium</CardTitle>
+                                <p className="text-3xl font-extrabold mt-2 text-gray-900">R$ 9,90<span className="text-sm font-normal text-gray-500">/mês</span></p>
+                            </CardHeader>
+                            <CardContent className="flex-1 flex flex-col">
+                                <ul className="space-y-4 text-gray-600 mb-8 flex-1">
+                                    <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> <strong>Álbuns Ilimitados</strong></li>
+                                    <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> Prioridade nas trocas (AI Match)</li>
+                                    <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> Estatísticas avançadas</li>
+                                    <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> Sem anúncios</li>
+                                </ul>
+                                <div className="mt-auto space-y-2 text-center">
+                                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-lg font-bold shadow-md hover:shadow-lg transition-all" onClick={() => handleWebapp('/premium')}>
+                                        Assinar Premium
+                                    </Button>
+                                    <p className="text-xs text-gray-400">
+                                        *Necessário criar uma conta para assinar.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </section>
