@@ -55,6 +55,18 @@ function HomeDispatcher() {
   return <LandingPage />
 }
 
+function AuthDispatcher() {
+  const host = window.location.hostname
+  const isLanding = !host.startsWith('app.') && host !== 'localhost'
+
+  if (isLanding) {
+    window.location.href = `https://app.trocaai.net/auth${window.location.search}`
+    return null
+  }
+
+  return <AuthPage />
+}
+
 function App() {
   const { setSession } = useAuthStore()
   const [authInitialized, setAuthInitialized] = useState(false)
@@ -85,7 +97,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth" element={<AuthDispatcher />} />
         <Route
           path="/profile/setup"
           element={
