@@ -51,6 +51,8 @@ export default function PublicLayout() {
                     <div className="text-sm text-gray-500 flex flex-col items-center md:items-start gap-1">
                         <p>&copy; {new Date().getFullYear()} Troca Aí. Todos os direitos reservados.</p>
                         <p className="text-xs text-gray-400">CNPJ: 34.600.915/0001-50</p>
+                        <p className="text-xs text-gray-400">Tel: +55 (75) 99190-1239</p>
+                        <p className="text-xs text-gray-400">E-mail: contato@trocaai.net</p>
                     </div>
                     <div className="flex gap-6 text-sm font-medium text-gray-600">
                         <a href="/terms" className="hover:text-green-600">Termos de Uso</a>
