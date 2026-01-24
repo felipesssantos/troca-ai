@@ -18,6 +18,7 @@ import Terms from '@/pages/Terms'
 import Privacy from '@/pages/Privacy'
 import UpdatePassword from '@/pages/UpdatePassword'
 import LandingPage from '@/pages/Landing'
+import Inbox from '@/pages/Inbox'
 import Header from '@/components/Header'
 
 // Admin Imports
@@ -184,6 +185,14 @@ function App() {
           element={
             <PrivateRoute>
               <Trades />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/inbox"
+          element={
+            <PrivateRoute>
+              <Inbox />
             </PrivateRoute>
           }
         />

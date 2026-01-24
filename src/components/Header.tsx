@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -72,6 +73,8 @@ export default function Header() {
 
     const isActive = (path: string) => location.pathname === path
 
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
     useEffect(() => {
         if (!user) return
 
@@ -96,15 +99,49 @@ export default function Header() {
         }
         fetchTradesCount()
 
+        const fetchUnreadMessages = async () => {
+            // Count messages where I am the receiver (implied by conversation logic, but simpler: I am NOT the sender)
+            // Actually, we need to join conversations to know if I'm involved?
+            // No, RLS protects us. So we just count messages where sender_id != me AND is_read = false.
+            // But wait, RLS allows viewing messages of my conversations.
+            // So queries will return messages sent TO me and BY me.
+            // So: sender_id != user.id
+            const { count } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .neq('sender_id', user.id)
+                .eq('is_read', false)
+
+            setUnreadMessagesCount(count || 0)
+        }
+        fetchUnreadMessages()
+
         // Subscribe to new trades (Realtime)
-        const channel = supabase
+        const channelTrades = supabase
             .channel('public:trades-header')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades', filter: `receiver_id=eq.${user.id}` },
                 () => setPendingTradesCount(prev => prev + 1)
             )
             .subscribe()
 
-        return () => { supabase.removeChannel(channel) }
+        // Subscribe to new messages (Realtime)
+        // Note: Filter allows only direct user messages if we could filtering by something. 
+        // But since we can't filter by "not sender" easily in realtime filter string, we subscribe to all insertions in table messages
+        // And inside callback check if sender is not me.
+        // Subscribe to new messages (Realtime)
+        // Simplification: On ANY message change that might affect me, re-fetch the count.
+        // It's safer than calculating deltas without full replica identity.
+        const channelMessages = supabase
+            .channel('public:messages-header')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+                fetchUnreadMessages()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channelTrades)
+            supabase.removeChannel(channelMessages)
+        }
     }, [user])
 
     const handleLogout = async () => {
@@ -143,6 +180,21 @@ export default function Header() {
                         >
                             <span className="hidden sm:inline">Área de Troca</span>
                             <span className="sm:hidden">Trocas</span>
+                        </Button>
+
+                        <Button
+                            variant={isActive('/inbox') ? 'default' : 'ghost'}
+                            size="icon"
+                            onClick={() => navigate('/inbox')}
+                            className={`mr-2 relative ${isActive('/inbox') ? 'bg-green-600 text-white hover:bg-green-700' : ''}`}
+                            title="Mensagens"
+                        >
+                            <MessageCircle className="h-5 w-5" />
+                            {unreadMessagesCount > 0 && (
+                                <span className={`absolute -top-1 -right-1 text-[10px] rounded-full h-4 w-4 flex items-center justify-center animate-bounce ${isActive('/inbox') ? 'bg-white text-green-600' : 'bg-green-600 text-white'}`}>
+                                    {unreadMessagesCount}
+                                </span>
+                            )}
                         </Button>
 
                         <NotificationBell />
