@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useTour } from '@/hooks/useTour'
+import { MessageCircle } from 'lucide-react'
 
 interface Trade {
     id: string
@@ -298,12 +299,20 @@ export default function Trades() {
                                 <CardFooter className="flex justify-end gap-2 pt-0">
                                     {activeTab === 'received' && trade.status === 'pending' && (
                                         <>
+                                            <Button variant="ghost" size="icon" onClick={() => navigate(`/inbox?userId=${trade.sender_id}`)} title="Enviar Mensagem">
+                                                <MessageCircle className="h-5 w-5 text-gray-500" />
+                                            </Button>
                                             <Button variant="destructive" size="sm" onClick={() => handleReject(trade.id)}>Rejeitar</Button>
                                             <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => initiateAccept(trade)}>Aceitar</Button>
                                         </>
                                     )}
                                     {activeTab === 'sent' && trade.status === 'pending' && (
-                                        <Button variant="destructive" size="sm" onClick={() => handleCancelTrade(trade.id)}>Cancelar Proposta</Button>
+                                        <>
+                                            <Button variant="ghost" size="icon" onClick={() => navigate(`/inbox?userId=${trade.receiver_id}`)} title="Enviar Mensagem">
+                                                <MessageCircle className="h-5 w-5 text-gray-500" />
+                                            </Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleCancelTrade(trade.id)}>Cancelar Proposta</Button>
+                                        </>
                                     )}
                                 </CardFooter>
                             </Card>

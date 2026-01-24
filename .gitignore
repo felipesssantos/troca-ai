@@ -32,4 +32,5 @@ dist-ssr
 /tests/load
 
 # Script de banco de dados
-*.sql  
+*.sql
+*.txt  
