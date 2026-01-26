@@ -64,6 +64,20 @@ export default function StoreForm() {
             const { data: tmpls } = await supabase.from('albums').select('id, name')
             if (tmpls) setTemplates(tmpls)
 
+            // Permission Check: Must be Premium or Partner
+            // We fetch profile implicitly.
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_premium, is_partner')
+                .eq('id', user.id)
+                .single()
+
+            if (!profile?.is_premium && !profile?.is_partner) {
+                alert('A criação de lojas é exclusiva para usuários Premium ou Parceiros. Atualize seu plano!')
+                navigate('/premium')
+                return
+            }
+
             // Limit Check: If creating new, check if user already has a store
             if (!isEditing) {
                 const { count } = await supabase

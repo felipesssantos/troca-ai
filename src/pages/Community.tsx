@@ -136,21 +136,34 @@ export default function Community() {
                 .neq('id', user?.id || '')
                 .eq('account_type', 'user') // Explicitly only normal users
 
-            // B. Fetch Stores (with stock)
+            // B. Fetch Stores (with stock) - ONLY from Premium or Partner users
             const { data: storeData } = await supabase
                 .from('stores')
                 .select(`
                     id, name, address, city, state, opening_hours, instagram, whatsapp, show_whatsapp,
+                    owner_id,
+                    owner:profiles(is_premium, is_partner),
                     stock:store_stock(has_packets, has_singles)
                 `)
+            // The !inner join automatically filters stores where the profile doesn't match the condition if we add a filter
+            // But Supabase JS filter syntax on joined tables can be tricky.
+            // A simpler way often used is filtering in the application layer if data size is small, but for security/scale:
+            // Let's rely on the query response. If we filter in JS it handles the OR logic easier.
 
             if (userData) {
                 setUsers(userData.map(u => ({ ...u, is_store: false })))
             }
 
             if (storeData) {
+                // Filter verified stores (Premium OR Partner)
+                const verifiedStores = storeData.filter((s: any) => {
+                    const isPrem = s.owner?.is_premium === true
+                    const isPart = s.owner?.is_partner === true
+                    return isPrem || isPart
+                })
+
                 // Process stock badges (aggregated)
-                const processedStores = storeData.map((s: any) => {
+                const processedStores = verifiedStores.map((s: any) => {
                     const hasPackets = s.stock.some((st: any) => st.has_packets)
                     const hasSingles = s.stock.some((st: any) => st.has_singles)
                     return {
