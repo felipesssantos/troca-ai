@@ -25,8 +25,8 @@ jobs:
           FILENAME="backup_trocaai_$TIMESTAMP.sql"
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
           
-          # pg_dump direto da URL do Supabase
-          pg_dump "$DATABASE_URL" -F p -f "$FILENAME"
+          # pg_dump direto da URL do Supabase (usando flag --dbname para garantir parsing da URL)
+          pg_dump --dbname="$DATABASE_URL" -F p -f "$FILENAME"
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
 
