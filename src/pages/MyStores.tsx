@@ -18,11 +18,22 @@ export default function MyStores() {
     const navigate = useNavigate()
     const [stores, setStores] = useState<StoreType[]>([])
     const [loading, setLoading] = useState(true)
+    const [permissions, setPermissions] = useState({ isPremium: false, isPartner: false })
 
     useEffect(() => {
         if (!user) return
 
-        const fetchStores = async () => {
+        const fetchData = async () => {
+            // 1. Fetch Permissions
+            const { data: profile } = await supabase.from('profiles').select('is_premium, is_partner').eq('id', user.id).single()
+            if (profile) {
+                setPermissions({
+                    isPremium: profile.is_premium || false,
+                    isPartner: profile.is_partner || false
+                })
+            }
+
+            // 2. Fetch Stores
             const { data } = await supabase
                 .from('stores')
                 .select('id, name, city, state')
@@ -33,8 +44,10 @@ export default function MyStores() {
             setLoading(false)
         }
 
-        fetchStores()
+        fetchData()
     }, [user])
+
+    const canCreateStore = (permissions.isPremium || permissions.isPartner) && stores.length === 0
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 pb-20">
@@ -44,8 +57,8 @@ export default function MyStores() {
                         <h1 className="text-2xl font-bold">Minhas Lojas</h1>
                         <p className="text-muted-foreground">Gerencie seus pontos de troca.</p>
                     </div>
-                    {/* Limit to 1 store per user */}
-                    {!loading && stores.length === 0 && (
+                    {/* Limit to 1 store per user AND Check Permissions */}
+                    {!loading && canCreateStore && (
                         <Button onClick={() => navigate('/my-stores/new')} className="bg-indigo-600 hover:bg-indigo-700">
                             <PlusCircle className="mr-2 h-4 w-4" /> Nova Loja
                         </Button>
@@ -60,11 +73,20 @@ export default function MyStores() {
                             <Store className="h-12 w-12 text-muted-foreground mb-4" />
                             <h3 className="font-semibold text-lg mb-2">Nenhuma loja criada</h3>
                             <p className="text-muted-foreground mb-4 max-w-sm">
-                                Se você tem um estabelecimento comercial e aceita trocas de figurinhas, cadastre-o aqui para aparecer na Comunidade!
+                                {permissions.isPremium || permissions.isPartner
+                                    ? "Se você tem um estabelecimento comercial e aceita trocas de figurinhas, cadastre-o aqui para aparecer na Comunidade!"
+                                    : "A criação de lojas é exclusiva para usuários Premium ou Parceiros."}
                             </p>
-                            <Button variant="outline" onClick={() => navigate('/my-stores/new')}>
-                                Cadastrar Ponto de Troca
-                            </Button>
+
+                            {permissions.isPremium || permissions.isPartner ? (
+                                <Button variant="outline" onClick={() => navigate('/my-stores/new')}>
+                                    Cadastrar Ponto de Troca
+                                </Button>
+                            ) : (
+                                <Button className="bg-gradient-to-r from-yellow-500 to-amber-600 border-0" onClick={() => navigate('/premium')}>
+                                    Seja Premium para criar Loja
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
                 ) : (
