@@ -9,6 +9,7 @@ jobs:
   backup:
     name: Dump and Upload
     runs-on: ubuntu-latest
+    environment: prd
     
     steps:
       - name: Checkout Code
