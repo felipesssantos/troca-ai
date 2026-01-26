@@ -1,0 +1,42 @@
+name: Database Backup to MinIO
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Roda todo dia às 06:00 UTC (03:00 Brasil)
+  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  backup:
+    name: Dump and Upload
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create Database Dump
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+          FILENAME="backup_trocaai_$TIMESTAMP.sql"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          
+          # pg_dump direto da URL do Supabase
+          pg_dump "$DATABASE_URL" -F p -f "$FILENAME"
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Install and Configure AWS CLI (for MinIO)
+        run: |
+          # AWS CLI já vem instalado no ubuntu-latest, só configuramos
+          aws configure set aws_access_key_id ${{ secrets.VITE_MINIO_ACCESS_KEY }}
+          aws configure set aws_secret_access_key ${{ secrets.VITE_MINIO_SECRET_KEY }}
+          aws configure set default.region us-east-1
+
+      - name: Upload to MinIO
+        run: |
+          aws s3 cp "$FILENAME" s3://${{ secrets.MINIO_DB_BUCKET }}/backups/ --endpoint-url ${{ secrets.VITE_MINIO_ENDPOINT }}
