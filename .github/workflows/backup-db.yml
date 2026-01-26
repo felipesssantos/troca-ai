@@ -15,6 +15,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Force IPv4 DNS
+        run: sudo sh -c 'echo "precedence ::ffff:0:0/96 100" >> /etc/gai.conf'
+
       - name: Install PostgreSQL Client
         run: |
           sudo apt-get update
