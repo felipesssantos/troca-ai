@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useTour } from '@/hooks/useTour'
@@ -37,6 +37,8 @@ export default function UserAlbum() {
     const { username } = useParams()
     const { user: currentUser } = useAuthStore()
     const navigate = useNavigate()
+    const location = useLocation()
+    const stateParams = location.state as { myAlbumId?: string, theirAlbumId?: string } | null
 
     const [targetUser, setTargetUser] = useState<Profile | null>(null)
     const [stickers, setStickers] = useState<Record<number, number>>({}) // Target user's stickers
@@ -94,6 +96,12 @@ export default function UserAlbum() {
             if (data && data.length > 0) {
                 setMyAlbums(data as any)
                 setSelectedAlbumId(prev => {
+                    // Priority: 1. State Param, 2. Current Prev (if valid), 3. First available
+                    if (stateParams?.myAlbumId) {
+                        const fromState = data.find((a: any) => a.id === stateParams.myAlbumId)
+                        if (fromState) return fromState.id
+                    }
+
                     const valid = data.find((a: any) => a.id === prev)
                     return valid ? prev : data[0].id
                 })
@@ -191,13 +199,23 @@ export default function UserAlbum() {
 
                 // Select first one if none selected or if selected is not in the list
                 let targetId = selectedTargetAlbumId
+
+                // Priority Check for Their Album
+                if (stateParams?.theirAlbumId) {
+                    // @ts-ignore
+                    if (theirAlbumsData.some(a => a.id === stateParams.theirAlbumId)) {
+                        targetId = stateParams.theirAlbumId
+                    }
+                }
+
                 // @ts-ignore
                 const validIds = theirAlbumsData.map(a => a.id)
                 if (!targetId || !validIds.includes(targetId)) {
                     // @ts-ignore
                     targetId = theirAlbumsData[0].id
-                    setSelectedTargetAlbumId(targetId)
                 }
+
+                setSelectedTargetAlbumId(targetId)
 
                 // D. Fetch THEIR stickers (from THEIR matching album)
                 const theirMap: Record<number, number> = {}
