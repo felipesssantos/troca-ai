@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useParams } from 'react-router-dom'
-import { ChevronDown, ChevronRight, Search, Share2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Search, Share2, ChevronsDown, ChevronsUp } from 'lucide-react'
 
 interface StickerMetadata {
     sticker_number: number
@@ -27,11 +27,11 @@ export default function Album() {
     const [loading, setLoading] = useState(true)
     const [totalStickers, setTotalStickers] = useState(670)
     const [albumName, setAlbumName] = useState('')
-    const [filter, setFilter] = useState<'all' | 'missing' | 'repeated'>('all')
+    const [filter, setFilter] = useState<'all' | 'missing' | 'repeated' | 'completed'>('all')
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('')
-    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
     // Load initial data
     useEffect(() => {
@@ -115,11 +115,25 @@ export default function Album() {
         updateStickerCount(num, false)
     }
 
+    // Derived state for sections (needed for toggle all)
+    const allSections = Array.from(new Set(metadata.map(s => s.section)))
+    const areAllExpanded = allSections.length > 0 && allSections.every(s => expandedSections[s])
+
     const toggleSection = (section: string) => {
-        setCollapsedSections(prev => ({
+        setExpandedSections(prev => ({
             ...prev,
             [section]: !prev[section]
         }))
+    }
+
+    const toggleAllSections = () => {
+        if (areAllExpanded) {
+            setExpandedSections({})
+        } else {
+            const newMap: Record<string, boolean> = {}
+            allSections.forEach(s => newMap[s] = true)
+            setExpandedSections(newMap)
+        }
     }
 
     const handleShareRepeated = () => {
@@ -167,22 +181,50 @@ export default function Album() {
                 if (visible) sections[s.section].push(s)
             })
 
-            // Apply Search Filter
-            const filteredSections = sectionOrder.filter(secTitle =>
-                searchTerm === '' || secTitle.toLowerCase().includes(searchTerm.toLowerCase())
-            )
+            // Filter SECTIONS based on criteria
+            const filteredSections = sectionOrder.filter(secTitle => {
+                const stickersInSec = sections[secTitle]
+
+                // Search Filter
+                if (searchTerm && !secTitle.toLowerCase().includes(searchTerm.toLowerCase())) return false
+
+                // Completed Filter (Show ONLY sections where user has ALL stickers)
+                if (filter === 'completed') {
+                    const isComplete = stickersInSec.every(s => (userDistricts[s.sticker_number] || 0) > 0)
+                    return isComplete
+                }
+
+                return true
+            })
 
             if (filteredSections.length === 0) {
-                return <div className="text-center py-10 text-gray-400">Nenhuma seção encontrada.</div>
+                return (
+                    <div className="text-center py-10 text-gray-400">
+                        {filter === 'completed'
+                            ? "Nenhuma seção 100% completa ainda. Continue trocando!"
+                            : "Nenhuma seção encontrada."}
+                    </div>
+                )
             }
 
             return (
                 <div className="space-y-4">
                     {filteredSections.map(secTitle => {
                         const stickersInSec = sections[secTitle]
-                        if (stickersInSec.length === 0) return null
 
-                        const isCollapsed = collapsedSections[secTitle]
+                        // Filter ITEMS within section (for non-completed filters)
+                        const visibleStickers = stickersInSec.filter(s => {
+                            if (filter === 'completed') return true // Already filtered section
+
+                            const count = userDistricts[s.sticker_number] || 0
+                            if (filter === 'missing' && count > 0) return false
+                            if (filter === 'repeated' && count <= 1) return false
+                            return true
+                        })
+
+                        if (visibleStickers.length === 0) return null
+
+                        const isExpanded = expandedSections[secTitle]
 
                         return (
                             <div key={secTitle} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
@@ -191,15 +233,18 @@ export default function Album() {
                                     className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
                                 >
                                     <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                                        {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                                        {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                                         {secTitle}
+                                        {filter === 'completed' && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Completa! ✅</span>}
                                         <span className="text-xs font-normal text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
-                                            {stickersInSec.length}
+                                            {visibleStickers.length}
                                         </span>
                                     </h3>
                                 </button>
 
-                                {!isCollapsed && (
+                                {/* ... sticker grid content ... */}
+
+                                {isExpanded && (
                                     <div className="p-3 bg-white border-t border-gray-100">
                                         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                                             {stickersInSec.map((s) => (
@@ -291,20 +336,32 @@ export default function Album() {
                     <Badge variant={filter === 'repeated' ? 'default' : 'outline'} onClick={() => setFilter('repeated')} className="cursor-pointer whitespace-nowrap">
                         Repetidas ({totalRepeated})
                     </Badge>
+                    <Badge
+                        variant={filter === 'completed' ? 'default' : 'outline'}
+                        onClick={() => setFilter('completed')}
+                        className={`cursor-pointer whitespace-nowrap ${filter === 'completed' ? 'bg-green-600 hover:bg-green-700' : 'border-green-600 text-green-700 hover:bg-green-50'}`}
+                    >
+                        Completas ✅
+                    </Badge>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
+                {/* Search Bar & Toggle */}
+                <div className="flex gap-2">
+                    <div className="relative shadow-sm flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar time ou seção..."
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar time ou seção..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm transition duration-150 ease-in-out"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    <Button variant="outline" onClick={toggleAllSections} className="px-3" title={areAllExpanded ? "Recolher Tudo" : "Expandir Tudo"}>
+                        {areAllExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
+                    </Button>
                 </div>
             </div>
 
