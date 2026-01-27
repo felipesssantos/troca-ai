@@ -13,7 +13,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -222,6 +221,18 @@ export default function AdminUsers() {
 
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
+                                                {/* Role Management */}
+                                                {(role === 'user' || role === 'admin') && currentUserRole === 'super_admin' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0"
+                                                        title={role === 'user' ? "Promover a Admin" : "Rebaixar a User"}
+                                                        onClick={() => handleRoleUpdate(user.id, user.username, role === 'user' ? 'admin' : 'user')}
+                                                    >
+                                                        <Badge variant="outline" className="text-[10px] px-1">{role === 'user' ? '⬆️' : '⬇️'}</Badge>
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
