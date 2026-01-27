@@ -73,18 +73,44 @@ function App() {
   const [authInitialized, setAuthInitialized] = useState(false)
 
   useEffect(() => {
+    const checkUserStatus = async (session: any) => {
+      if (!session?.user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_blocked')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profile?.is_blocked) {
+        await supabase.auth.signOut()
+        alert('Sua conta foi suspensa por violar os termos de uso. Entre em contato com o suporte.')
+        setSession(null)
+        window.location.href = '/'
+      } else {
+        setSession(session)
+      }
+    }
+
     // 1. Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setAuthInitialized(true)
+      if (session) {
+        checkUserStatus(session).then(() => setAuthInitialized(true))
+      } else {
+        setSession(null)
+        setAuthInitialized(true)
+      }
     })
 
     // 2. Listen for changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      // Ensure we mark as initialized if an event fires accurately
+      if (session) {
+        checkUserStatus(session)
+      } else {
+        setSession(null)
+      }
       setAuthInitialized(true)
     })
 
