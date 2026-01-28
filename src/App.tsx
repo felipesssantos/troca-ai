@@ -87,30 +87,22 @@ function App() {
         alert('Sua conta foi suspensa por violar os termos de uso. Entre em contato com o suporte.')
         setSession(null)
         window.location.href = '/'
-      } else {
-        setSession(session)
       }
     }
 
     // 1. Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        checkUserStatus(session).then(() => setAuthInitialized(true))
-      } else {
-        setSession(null)
-        setAuthInitialized(true)
-      }
+      setSession(session)
+      if (session) checkUserStatus(session)
+      setAuthInitialized(true)
     })
 
     // 2. Listen for changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        checkUserStatus(session)
-      } else {
-        setSession(null)
-      }
+      setSession(session)
+      if (session) checkUserStatus(session)
       setAuthInitialized(true)
     })
 
