@@ -11,17 +11,23 @@ export default function AdminRoute() {
     useEffect(() => {
         const checkAdmin = async () => {
             if (!user) {
+                console.log('AdminRoute: Sem usuário logado.')
                 setLoading(false)
                 return
             }
 
-            const { data } = await supabase
+            console.log('AdminRoute: Verificando usuário:', user.id)
+            const { data, error } = await supabase
                 .from('profiles')
-                .select('is_admin')
+                .select('is_admin, role')
                 .eq('id', user.id)
                 .single()
 
-            setIsAdmin(data?.is_admin || false)
+            console.log('AdminRoute: Resultado:', { data, error })
+
+            // Check both legacy is_admin flag OR role
+            const hasAdminAccess = data?.is_admin || data?.role === 'admin' || data?.role === 'super_admin'
+            setIsAdmin(!!hasAdminAccess)
             setLoading(false)
         }
 
