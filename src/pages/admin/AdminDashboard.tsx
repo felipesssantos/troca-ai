@@ -69,7 +69,6 @@ export default function AdminDashboard() {
             })
 
             // Fix gaps in accumulation (if a day had no new users, it should carry over the previous total)
-            let lastKnownTotal = 0
             // We need to iterate chronologically through ALL history to get the accurate start point, 
             // but simplified: we just take the running count. 
             // Actually, to display "Accumulated" correctly in the window, we need to know the Total BEFORE the window started.
