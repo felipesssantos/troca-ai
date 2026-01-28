@@ -4,7 +4,15 @@ import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
-import { Send, ArrowLeft } from 'lucide-react'
+import { Send, ArrowLeft, ShieldAlert } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog"
 
 interface Conversation {
     id: string
@@ -34,6 +42,9 @@ export default function Inbox() {
     const [messages, setMessages] = useState<Message[]>([])
     const [newMessage, setNewMessage] = useState('')
     const [loading, setLoading] = useState(true)
+
+    // Safety Warning State
+    const [showSafetyWarning, setShowSafetyWarning] = useState(false)
 
     // Mobile view state
     const [showChatOnMobile, setShowChatOnMobile] = useState(false)
@@ -127,11 +138,15 @@ export default function Inbox() {
     useEffect(() => {
         if (!activeConversation) return
 
+        // Hide warning initially when switching chats
+        setShowSafetyWarning(false)
+
         fetchMessages(activeConversation)
         setShowChatOnMobile(true)
 
         // Realtime Subscription for Messages
         const sub = supabase
+            // ... existing subscription logic ...
             .channel(`chat-${activeConversation}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversation}` }, async (payload) => {
                 const newMessage = payload.new as Message
@@ -152,15 +167,11 @@ export default function Inbox() {
         return () => {
             supabase.removeChannel(sub)
         }
-    }, [activeConversation])
+    }, [activeConversation]) // Removed user dependency to avoid loops if user obj changes ref
 
     const fetchConversations = async () => {
+        // ... existing implementation ...
         if (!user) return
-
-        // This query assumes we have policies setup correctly
-        // We need to fetch the OTHER user's profile.
-        // Since we don't have a direct relation in the response easily without joins, 
-        // we'll do client-side mapping for now or use specific query.
 
         const { data, error } = await supabase
             .from('conversations')
@@ -173,14 +184,9 @@ export default function Inbox() {
             return
         }
 
-        // Parallel fetch for profiles AND unread counts
         const enrichedConversations = await Promise.all(data.map(async (conv: any) => {
             const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id
-
-            // Fetch Profile
             const { data: profile } = await supabase.from('profiles').select('username, avatar_url').eq('id', otherUserId).single()
-
-            // Fetch Unread Count for this conversation
             const { count } = await supabase
                 .from('messages')
                 .select('*', { count: 'exact', head: true })
@@ -206,7 +212,16 @@ export default function Inbox() {
             .eq('conversation_id', conversationId)
             .order('created_at', { ascending: true })
 
-        if (data) setMessages(data)
+        if (data) {
+            setMessages(data)
+
+            // LOGIC: Show warning ONLY if I haven't sent any messages yet
+            // This covers: New Chat (0 total) OR Incoming Request (0 from me)
+            const hasSentMessage = data.some(m => m.sender_id === user?.id)
+            if (!hasSentMessage) {
+                setShowSafetyWarning(true)
+            }
+        }
 
         // Mark messages as read using RPC
         const { error } = await supabase.rpc('mark_messages_read', {
@@ -214,7 +229,6 @@ export default function Inbox() {
         })
 
         if (!error) {
-            // Update local state to remove badge if present
             setConversations(prev => prev.map(c => {
                 if (c.id === conversationId) return { ...c, unread_count: 0 }
                 return c
@@ -387,6 +401,34 @@ export default function Inbox() {
                     </div>
                 )}
             </Card>
+
+            {/* Safety Dialog */}
+            <Dialog open={showSafetyWarning} onOpenChange={setShowSafetyWarning}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600">
+                            <ShieldAlert className="h-6 w-6" />
+                            Dicas de Segurança Importantes
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 text-base space-y-3 text-slate-700">
+                            <p>
+                                <strong>⚠️ Atenção:</strong> Se você for menor de 18 anos,
+                                avise sempre seu responsável sobre qualquer negociação ou encontro.
+                            </p>
+                            <ul className="list-disc pl-5 space-y-1 text-sm">
+                                <li>Marque trocas apenas em <strong>locais públicos e movimentados</strong> (Shoppings, Estações de Metrô).</li>
+                                <li>Nunca vá a locais isolados ou residências desconhecidas.</li>
+                                <li>Se possível, vá acompanhado(a).</li>
+                            </ul>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button onClick={() => setShowSafetyWarning(false)} className="w-full bg-amber-600 hover:bg-amber-700 text-white">
+                            Entendi, vou tomar cuidado
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
