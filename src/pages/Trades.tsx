@@ -220,7 +220,7 @@ export default function Trades() {
             <div className="max-w-2xl mx-auto space-y-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold">Trocas</h1>
-                    <Button variant="outline" onClick={() => navigate('/')}>Voltar</Button>
+                    <Button variant="outline" onClick={() => navigate('/dashboard')}>Voltar</Button>
                 </div>
 
                 <div id="trades-tabs" className="flex gap-2 p-1 bg-gray-200 rounded-lg">

@@ -240,16 +240,23 @@ export default function Dashboard() {
 
     const toggleAlbumVisibility = async (e: React.MouseEvent, albumId: string, currentStatus: boolean) => {
         e.stopPropagation()
-        // Logic moved inside Dropdown for better UX, but kept function if needed or call directly
+
+        // If currently PUBLIC and turning PRIVATE, warn user
+        const newStatus = !currentStatus
+        if (!newStatus) {
+            const confirmed = confirm("⚠️ ATENÇÃO: Ao tornar este álbum privado, outros usuários não verão o nome dele em propostas de troca que você fizer (aparecerá como 'Álbum Privado').\n\nDeseja realmente continuar?")
+            if (!confirmed) return
+        }
+
         try {
             const { error } = await supabase
                 .from('user_albums')
-                .update({ is_public: !currentStatus })
+                .update({ is_public: newStatus })
                 .eq('id', albumId)
 
             if (error) throw error
 
-            setUserAlbums(prev => prev.map(a => a.id === albumId ? { ...a, is_public: !currentStatus } : a))
+            setUserAlbums(prev => prev.map(a => a.id === albumId ? { ...a, is_public: newStatus } : a))
         } catch (err: any) {
             alert('Erro ao atualizar privacidade: ' + err.message)
         }

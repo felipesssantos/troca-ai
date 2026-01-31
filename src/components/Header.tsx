@@ -153,7 +153,7 @@ export default function Header() {
         <div id="main-header" className="bg-white shadow-sm sticky top-0 z-50 p-2 sm:p-4">
             <div className="max-w-4xl mx-auto">
                 <div className="flex justify-between items-center sm:gap-4 flex-wrap">
-                    <div className="cursor-pointer" onClick={() => navigate('/')}>
+                    <div className="cursor-pointer" onClick={() => navigate('/dashboard')}>
                         <img src="/logo.png" alt="Troca.ai" className="h-12 w-auto object-contain" />
                     </div>
                     <div className="flex gap-1 sm:gap-2 items-center mt-1 sm:mt-0">

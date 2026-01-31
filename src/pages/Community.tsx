@@ -267,7 +267,7 @@ export default function Community() {
             <div className="max-w-2xl mx-auto space-y-4">
                 <div className="flex items-center justify-between gap-4">
                     <h1 className="text-2xl font-bold">Comunidade</h1>
-                    <Button variant="outline" onClick={() => navigate('/')}>Meu Álbum</Button>
+                    <Button variant="outline" onClick={() => navigate('/dashboard')}>Meu Álbum</Button>
                 </div>
 
                 {/* TABS */}
