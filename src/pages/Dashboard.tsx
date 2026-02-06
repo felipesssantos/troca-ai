@@ -58,6 +58,7 @@ export default function Dashboard() {
     const [reqName, setReqName] = useState('')
     const [reqDesc, setReqDesc] = useState('')
 
+
     useEffect(() => {
         if (!user) return
 
@@ -86,25 +87,23 @@ export default function Dashboard() {
                 const { data: albumsData } = await supabase
                     .from('user_albums')
                     .select(`
-                        id,
-                        nickname,
-                        album_template_id,
-                        is_public,
-                        template:albums ( * )
+                        id, nickname, album_template_id, is_public,
+                        template:albums ( id, name, total_stickers, cover_image )
                     `)
                     .eq('user_id', user.id)
 
                 if (albumsData) {
-                    // Start formatting as UserAlbum (casting because Supabase join return type inference can be tricky)
-                    setUserAlbums(albumsData as unknown as UserAlbum[])
+                    // @ts-ignore
+                    setUserAlbums(albumsData)
                 }
 
-            } catch (e) {
-                console.error(e)
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error)
             } finally {
                 setLoading(false)
             }
         }
+
         fetchData()
     }, [user, navigate])
 
@@ -274,7 +273,7 @@ export default function Dashboard() {
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button data-tour="create-album-btn">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Novo Álbum
                         </Button>

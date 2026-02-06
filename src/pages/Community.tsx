@@ -95,8 +95,35 @@ export default function Community() {
         {
             element: '#community-grid',
             popover: { title: 'Colecionadores', description: 'Aqui você encontra outros usuários. Veja quais álbuns eles têm disponíveis.', side: "bottom", align: 'start' }
+        },
+        {
+            element: 'button[data-tour="tab-matches"]',
+            popover: {
+                title: 'AI Match 🤖',
+                description: 'Nossa inteligência artificial cruza seus dados para encontrar o parceiro de troca PERFEITO (ele tem o que você quer e quer o que você tem!). Teste agora!',
+                side: "bottom", align: 'start'
+            }
         }
     ])
+
+    useTour('ai-match', [
+        {
+            element: '[data-tour="match-album-selector"]',
+            popover: {
+                title: 'Escolha seu Álbum 📒',
+                description: 'Selecione qual dos seus álbuns você quer usar para a Mágica acontecer! Vamos cruzar as figurinhas dele com a de outros usuários.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
+            element: '[data-tour="filters-section"]',
+            popover: {
+                title: 'Filtre por Localização 📍',
+                description: 'Você pode filtrar por Cidade e Estado para encontrar trocas próximas!',
+                side: "bottom", align: 'start'
+            }
+        }
+    ], { enabled: activeTab === 'matches' })
 
     // 1. Fetch Data
     useEffect(() => {
@@ -279,6 +306,7 @@ export default function Community() {
                         Colecionadores
                     </button>
                     <button
+                        data-tour="tab-matches"
                         className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-1 ${activeTab === 'matches' ? 'bg-white shadow text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('matches')}
                     >
@@ -293,7 +321,7 @@ export default function Community() {
                 </div>
 
                 {/* FILTERS */}
-                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                <div data-tour="filters-section" className="flex gap-2 flex-wrap sm:flex-nowrap">
                     <input
                         type="text"
                         placeholder={activeTab === 'stores' ? "Buscar Loja..." : activeTab === 'matches' ? "Filtrar por nome..." : "Buscar usuário (@)..."}
@@ -326,7 +354,7 @@ export default function Community() {
                     <div className="space-y-4">
                         {/* Album Selector (If multiple) or Badge */}
                         {userAlbums.length > 0 && (
-                            <div className="bg-white p-3 rounded-lg shadow-sm border flex items-center gap-3">
+                            <div data-tour="match-album-selector" className="bg-white p-3 rounded-lg shadow-sm border flex items-center gap-3">
                                 <span className="text-sm font-medium text-gray-700">Comparar com meu álbum:</span>
                                 <select
                                     className="flex-1 p-1.5 border rounded text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-pink-500"

@@ -4,11 +4,12 @@ import 'driver.js/dist/driver.css'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
 
-export const useTour = (tourKey: string, steps: any[]) => {
+export const useTour = (tourKey: string, steps: any[], options: { enabled?: boolean } = {}) => {
     const { user } = useAuthStore()
+    const { enabled = true } = options
 
     useEffect(() => {
-        if (!user || steps.length === 0) return
+        if (!user || steps.length === 0 || !enabled) return
 
         const checkAndStartTour = async () => {
             // 1. Fetch current progress
@@ -51,5 +52,5 @@ export const useTour = (tourKey: string, steps: any[]) => {
         // Small delay to ensure UI is mounted
         setTimeout(() => checkAndStartTour(), 1500)
 
-    }, [user, tourKey])
+    }, [user, tourKey, enabled])
 }
