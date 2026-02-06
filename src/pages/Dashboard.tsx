@@ -58,6 +58,7 @@ export default function Dashboard() {
     const [reqName, setReqName] = useState('')
     const [reqDesc, setReqDesc] = useState('')
 
+
     useEffect(() => {
         if (!user) return
 
@@ -86,25 +87,23 @@ export default function Dashboard() {
                 const { data: albumsData } = await supabase
                     .from('user_albums')
                     .select(`
-                        id,
-                        nickname,
-                        album_template_id,
-                        is_public,
-                        template:albums ( * )
+                        id, nickname, album_template_id, is_public,
+                        template:albums ( id, name, total_stickers, cover_image )
                     `)
                     .eq('user_id', user.id)
 
                 if (albumsData) {
-                    // Start formatting as UserAlbum (casting because Supabase join return type inference can be tricky)
-                    setUserAlbums(albumsData as unknown as UserAlbum[])
+                    // @ts-ignore
+                    setUserAlbums(albumsData)
                 }
 
-            } catch (e) {
-                console.error(e)
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error)
             } finally {
                 setLoading(false)
             }
         }
+
         fetchData()
     }, [user, navigate])
 
@@ -240,16 +239,23 @@ export default function Dashboard() {
 
     const toggleAlbumVisibility = async (e: React.MouseEvent, albumId: string, currentStatus: boolean) => {
         e.stopPropagation()
-        // Logic moved inside Dropdown for better UX, but kept function if needed or call directly
+
+        // If currently PUBLIC and turning PRIVATE, warn user
+        const newStatus = !currentStatus
+        if (!newStatus) {
+            const confirmed = confirm("⚠️ ATENÇÃO: Ao tornar este álbum privado, outros usuários não verão o nome dele em propostas de troca que você fizer (aparecerá como 'Álbum Privado').\n\nDeseja realmente continuar?")
+            if (!confirmed) return
+        }
+
         try {
             const { error } = await supabase
                 .from('user_albums')
-                .update({ is_public: !currentStatus })
+                .update({ is_public: newStatus })
                 .eq('id', albumId)
 
             if (error) throw error
 
-            setUserAlbums(prev => prev.map(a => a.id === albumId ? { ...a, is_public: !currentStatus } : a))
+            setUserAlbums(prev => prev.map(a => a.id === albumId ? { ...a, is_public: newStatus } : a))
         } catch (err: any) {
             alert('Erro ao atualizar privacidade: ' + err.message)
         }
@@ -267,7 +273,7 @@ export default function Dashboard() {
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button data-tour="create-album-btn">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Novo Álbum
                         </Button>

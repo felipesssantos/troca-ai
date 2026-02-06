@@ -40,6 +40,14 @@ export default function Header() {
             }
         },
         {
+            element: 'button[data-tour="create-album-btn"]',
+            popover: {
+                title: 'Comece por aqui! 🚀',
+                description: 'Clique em "Novo Álbum" para adicionar sua primeira coleção.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
             element: 'button[data-tour="community-btn"]',
             popover: {
                 title: 'Área de Troca',
@@ -56,6 +64,14 @@ export default function Header() {
             }
         },
         {
+            element: 'button[data-tour="inbox-btn"]',
+            popover: {
+                title: 'Mensagens / Chat 💬',
+                description: 'Converse diretamente com outros colecionadores para combinar detalhes da troca ou entrega.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
             popover: {
                 title: 'Como Controlar as Figurinhas? 🔢',
                 description: `<div style="font-size: 14px; line-height: 1.6;"><strong>🖱️ No Computador:</strong><br/>• Clique <b>Esquerdo</b>: Adiciona (+1)<br/>• Clique <b>Direito</b>: Remove (-1)<br/><br/><strong>📱 No Celular:</strong><br/>• <b>Toque</b>: Adiciona (+1)<br/>• <b>Segure</b>: Remove (-1)</div>`
@@ -65,7 +81,7 @@ export default function Header() {
             element: 'button[data-tour="profile-menu"]',
             popover: {
                 title: 'Seu Perfil',
-                description: 'Mude sua foto e gerencie seus dados aqui.',
+                description: 'Mude sua foto, gerencie seus dados e acesse suas configurações aqui.',
                 side: "bottom", align: 'start'
             }
         }
@@ -153,7 +169,7 @@ export default function Header() {
         <div id="main-header" className="bg-white shadow-sm sticky top-0 z-50 p-2 sm:p-4">
             <div className="max-w-4xl mx-auto">
                 <div className="flex justify-between items-center sm:gap-4 flex-wrap">
-                    <div className="cursor-pointer" onClick={() => navigate('/')}>
+                    <div className="cursor-pointer" onClick={() => navigate('/dashboard')}>
                         <img src="/logo.png" alt="Troca.ai" className="h-12 w-auto object-contain" />
                     </div>
                     <div className="flex gap-1 sm:gap-2 items-center mt-1 sm:mt-0">
@@ -185,6 +201,7 @@ export default function Header() {
                         <Button
                             variant={isActive('/inbox') ? 'default' : 'ghost'}
                             size="icon"
+                            data-tour="inbox-btn"
                             onClick={() => navigate('/inbox')}
                             className={`mr-2 relative ${isActive('/inbox') ? 'bg-green-600 text-white hover:bg-green-700' : ''}`}
                             title="Mensagens"

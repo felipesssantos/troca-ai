@@ -81,6 +81,14 @@ export default function UserAlbum() {
             // Fallback to body or a known container if grid selector fails, but let's try a broad selector for stickers
             element: '.grid',
             popover: { title: 'Figurinhas', description: 'Clique nas figurinhas coloridas para propor uma troca. (Verde = Você precisa, Azul = Você tem repetida).', side: "top", align: 'start' }
+        },
+        {
+            element: '[data-tour="trade-summary"]',
+            popover: {
+                title: 'Personalize sua Troca ✏️',
+                description: 'Aqui você vê o resumo. Se não quiser enviar ou receber alguma figurinha específica agora, basta clicar nela para remover da proposta.',
+                side: "top", align: 'center'
+            }
         }
     ])
 
@@ -507,7 +515,7 @@ export default function UserAlbum() {
             <div className="max-w-4xl mx-auto p-4 space-y-6">
 
                 {/* 2. Match Summary Card */}
-                <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
+                <Card data-tour="trade-summary" className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
                     <CardHeader>
                         <CardTitle className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-lg">
                             <span>Resumo da Troca</span>
