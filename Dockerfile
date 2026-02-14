@@ -24,7 +24,7 @@ ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 RUN npm run build
 
 # Stage 2: Serve with Nginx
-FROM nginx:alpine
+FROM nginx:1-alpine-slim
 
 # Copy built assets from builder stage
 COPY --from=build /app/dist /usr/share/nginx/html
