@@ -93,9 +93,9 @@ jobs:
             # 4. Login to GHCR (required if the repository/package is private)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # 5. Pull the latest image and start via docker compose (declarative)
-            docker compose pull
-            docker compose up -d
+            # 5. Pull the latest image and start via docker-compose (declarative)
+            docker-compose pull
+            docker-compose up -d
 
             # 6. Cleanup old images
             docker image prune -af
