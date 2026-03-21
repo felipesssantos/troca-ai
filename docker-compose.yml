@@ -1,21 +1,13 @@
 services:
   app:
-    build:
-      context: .
-      args:
-        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    image: ghcr.io/${GH_REPO}:latest
     container_name: troca-ai-app
     ports:
       - "3001:80"
     restart: always
 
   landing:
-    build:
-      context: .
-      args:
-        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    image: ghcr.io/${GH_REPO}:latest
     container_name: troca-ai-landing
     ports:
       - "3002:80"
