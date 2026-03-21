@@ -1,0 +1,13 @@
+-- Enable Realtime for Conversations and Messages
+-- This is required for the client to receive 'postgres_changes' events.
+
+BEGIN;
+  -- Try to add tables to the publication. 
+  -- If they are already added, this might throw a warning or error depending on Postgres version, 
+  -- but usually it's safe to run or specific syntax 'DROP if exists' isn't needed for publication management in the same way.
+  -- Supabase specifically needs this:
+  
+  ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+  ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+  
+COMMIT;

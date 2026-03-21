@@ -1,0 +1,129 @@
+-- Create Conversations Table
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user1_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    user2_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    trade_id UUID REFERENCES trades(id) ON DELETE SET NULL, -- Context of the trade (optional)
+    last_message TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
+    -- Ensure user1 < user2 to avoid duplicate conversation rows for the same pair
+    CONSTRAINT unique_participants UNIQUE (user1_id, user2_id) 
+);
+
+-- Indexes for Conversations
+CREATE INDEX idx_conversations_user1 ON conversations(user1_id);
+CREATE INDEX idx_conversations_user2 ON conversations(user2_id);
+CREATE INDEX idx_conversations_updated_at ON conversations(updated_at DESC);
+
+-- Enable RLS for Conversations
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view conversations they are part of
+CREATE POLICY "Users can view their own conversations" 
+ON conversations FOR SELECT 
+USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+-- Policy: Users can create conversations (if they are part of it)
+CREATE POLICY "Users can create conversations" 
+ON conversations FOR INSERT 
+WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+-- Policy: Users can update conversations (required for generic updates, though trigger handles last_message via security definer)
+CREATE POLICY "Users can update their conversations"
+ON conversations FOR UPDATE
+USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+
+-- Create Messages Table
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
+    sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Indexes for Messages
+CREATE INDEX idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at ASC);
+
+-- Enable RLS for Messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view messages in conversations they belong to
+CREATE POLICY "Users can view messages in their conversations" 
+ON messages FOR SELECT 
+USING (
+    EXISTS (
+        SELECT 1 FROM conversations c 
+        WHERE c.id = messages.conversation_id 
+        AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+    )
+);
+
+-- Policy: Users can send messages
+CREATE POLICY "Users can send messages"
+ON messages FOR INSERT 
+WITH CHECK (
+    auth.uid() = sender_id 
+    AND EXISTS (
+        SELECT 1 FROM conversations c 
+        WHERE c.id = messages.conversation_id 
+        AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+    )
+);
+
+-- Policy: Users can update messages (e.g. marking as read, though RPC handles this securely)
+CREATE POLICY "Users can update messages"
+ON messages FOR UPDATE
+USING (
+    EXISTS (
+        SELECT 1 FROM conversations c 
+        WHERE c.id = messages.conversation_id 
+        AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+    )
+);
+
+
+-- Function to update conversation timestamp and last message on new message
+-- SECURITY DEFINER is crucial here to bypass RLS when the trigger runs
+CREATE OR REPLACE FUNCTION update_conversation_on_message()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE conversations
+    SET updated_at = NOW(),
+        last_message = NEW.content
+    WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger for updating conversation
+-- Drop first to ensure we don't duplicate or conflict if re-running
+DROP TRIGGER IF EXISTS trigger_update_conversation ON messages;
+CREATE TRIGGER trigger_update_conversation
+AFTER INSERT ON messages
+FOR EACH ROW
+EXECUTE FUNCTION update_conversation_on_message();
+
+
+-- RPC: Mark messages as read
+CREATE OR REPLACE FUNCTION mark_messages_read(p_conversation_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE messages
+    SET is_read = true
+    WHERE conversation_id = p_conversation_id
+    AND sender_id != auth.uid(); -- Only mark messages sent by OTHERS as read
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- Enable Realtime
+BEGIN;
+  ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+  ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+COMMIT;

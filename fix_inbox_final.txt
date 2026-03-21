@@ -1,0 +1,24 @@
+-- 1. Fix Last Message Update (Trigger)
+-- Make the function SECURITY DEFINER to bypass RLS checks on the conversations table
+CREATE OR REPLACE FUNCTION update_conversation_on_message()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE conversations
+    SET updated_at = NOW(),
+        last_message = NEW.content
+    WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. Fix Mark as Read (RPC)
+-- Create a secure function to mark messages as read, bypassing detailed RLS for UPDATE
+CREATE OR REPLACE FUNCTION mark_messages_read(p_conversation_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE messages
+    SET is_read = true
+    WHERE conversation_id = p_conversation_id
+    AND sender_id != auth.uid(); -- Only mark messages sent by OTHERS as read
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -1,0 +1,17 @@
+-- Allow users to update conversations they are part of
+-- This is NECESSARY for the trigger that updates 'last_message' to work!
+CREATE POLICY "Users can update their conversations"
+ON conversations FOR UPDATE
+USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+-- Allow users to update messages in their conversations
+-- This is NECESSARY to mark messages as 'read' (is_read = true)
+CREATE POLICY "Users can update messages"
+ON messages FOR UPDATE
+USING (
+    EXISTS (
+        SELECT 1 FROM conversations c 
+        WHERE c.id = messages.conversation_id 
+        AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+    )
+);
