@@ -162,6 +162,7 @@ export default function Community() {
                 .eq('is_public', true)
                 .neq('id', user?.id || '')
                 .eq('account_type', 'user') // Explicitly only normal users
+                .not('username', 'is', null)
 
             // B. Fetch Stores (with stock) - ONLY from Premium or Partner users
             const { data: storeData } = await supabase
@@ -408,7 +409,7 @@ export default function Community() {
                                                         <div className="flex items-center gap-4">
                                                             <Avatar className="h-12 w-12 border-2 border-pink-100">
                                                                 <AvatarImage src={match.avatar_url} />
-                                                                <AvatarFallback>{match.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                                <AvatarFallback>{match.username?.slice(0, 2).toUpperCase() || 'US'}</AvatarFallback>
                                                             </Avatar>
                                                             <div>
                                                                 <h3 className="font-bold text-gray-800">@{match.username}</h3>
@@ -505,7 +506,7 @@ export default function Community() {
                                                 ) : (
                                                     <>
                                                         <AvatarImage src={item.avatar_url} />
-                                                        <AvatarFallback>{item.username?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                        <AvatarFallback>{item.username?.slice(0, 2).toUpperCase() || 'US'}</AvatarFallback>
                                                     </>
                                                 )}
                                             </Avatar>
