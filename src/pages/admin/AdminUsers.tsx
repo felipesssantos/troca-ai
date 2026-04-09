@@ -176,7 +176,7 @@ export default function AdminUsers() {
                                         <TableCell>
                                             <Avatar className="h-8 w-8">
                                                 <AvatarImage src={user.avatar_url} />
-                                                <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                                <AvatarFallback>{user.username?.slice(0, 2).toUpperCase() || 'US'}</AvatarFallback>
                                             </Avatar>
                                         </TableCell>
                                         <TableCell className="font-medium">
@@ -276,7 +276,7 @@ export default function AdminUsers() {
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-16 w-16">
                                     <AvatarImage src={selectedUser.avatar_url} />
-                                    <AvatarFallback>{selectedUser.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                    <AvatarFallback>{selectedUser.username?.slice(0, 2).toUpperCase() || 'US'}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                     <h3 className="text-lg font-bold">@{selectedUser.username}</h3>
