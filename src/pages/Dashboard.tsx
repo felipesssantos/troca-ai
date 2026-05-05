@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { PlusCircle, BookOpen, MoreVertical, Pencil, Eye, EyeOff, RotateCcw } from 'lucide-react'
+import { PlusCircle, BookOpen, MoreVertical, Pencil, Eye, EyeOff, RotateCcw, Trash2 } from 'lucide-react'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -226,7 +226,7 @@ export default function Dashboard() {
     const handleResetAlbum = async (e: React.MouseEvent, albumId: string) => {
         e.stopPropagation()
         const confirmText = prompt('ATENÇÃO: Você perderá TODAS as figurinhas marcadas neste álbum.\nDigite "RESETAR" para confirmar:')
-        if (confirmText !== 'RESETAR') return
+        if (confirmText?.toUpperCase() !== 'RESETAR') return
 
         try {
             const { error } = await supabase.rpc('reset_album_progress', { p_user_album_id: albumId })
@@ -234,6 +234,26 @@ export default function Dashboard() {
             alert('Álbum resetado com sucesso.')
         } catch (e: any) {
             alert('Erro ao resetar: ' + e.message)
+        }
+    }
+
+    const handleDeleteAlbum = async (e: React.MouseEvent, albumId: string) => {
+        e.stopPropagation()
+        const confirmText = prompt('ATENÇÃO: Você excluirá este álbum e TODAS as suas figurinhas permanentemente.\nDigite "EXCLUIR" para confirmar:')
+        if (confirmText?.toUpperCase() !== 'EXCLUIR') return
+
+        try {
+            const { error } = await supabase
+                .from('user_albums')
+                .delete()
+                .eq('id', albumId)
+
+            if (error) throw error
+
+            setUserAlbums(prev => prev.filter(a => a.id !== albumId))
+            alert('Álbum excluído com sucesso.')
+        } catch (e: any) {
+            alert('Erro ao excluir: ' + e.message)
         }
     }
 
@@ -444,6 +464,15 @@ export default function Dashboard() {
                                             onClick={(e) => handleResetAlbum(e, album.id)}
                                         >
                                             <RotateCcw size={16} className="mr-2" /> Resetar (Limpar)
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuSeparator />
+
+                                        <DropdownMenuItem
+                                            className="text-red-600 focus:text-red-600 font-bold"
+                                            onClick={(e) => handleDeleteAlbum(e, album.id)}
+                                        >
+                                            <Trash2 size={16} className="mr-2" /> Excluir Álbum
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
