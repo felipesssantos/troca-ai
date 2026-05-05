@@ -27,6 +27,7 @@ export default function Album() {
     const [loading, setLoading] = useState(true)
     const [totalStickers, setTotalStickers] = useState(670)
     const [albumName, setAlbumName] = useState('')
+    const [baseAlbumName, setBaseAlbumName] = useState('')
     const [filter, setFilter] = useState<'all' | 'missing' | 'repeated' | 'completed'>('all')
 
     // UI State
@@ -54,6 +55,7 @@ export default function Album() {
                 const name = albumData.albums.name
                 const nick = albumData.nickname
                 setAlbumName(nick ? `${name} - ${nick}` : name)
+                setBaseAlbumName(name)
             }
 
             // 2. Get Metadata (Sticker Codes & Sections)
@@ -137,17 +139,37 @@ export default function Album() {
     }
 
     const handleShareRepeated = () => {
-        const repeated = Object.entries(userDistricts)
+        const repeatedStickers = Object.entries(userDistricts)
             .filter(([_, count]) => count > 1)
-            .map(([num]) => num)
-            .sort((a, b) => Number(a) - Number(b))
+            .map(([numStr, count]) => {
+                const num = Number(numStr)
+                const meta = metadata.find(m => m.sticker_number === num)
+                const displayCode = meta ? meta.display_code.replace(' ', '') : num.toString()
+                const section = meta ? meta.section : 'Outros'
+                return {
+                    num,
+                    codeWithCount: `${displayCode}(${count - 1})`,
+                    section
+                }
+            })
+            .sort((a, b) => a.num - b.num)
 
-        if (repeated.length === 0) {
+        if (repeatedStickers.length === 0) {
             alert('Você não tem figurinhas repetidas neste álbum para compartilhar.')
             return
         }
 
-        const text = `Olha minhas repetidas do álbum ${albumName}:\n${repeated.join(', ')}`
+        const grouped: Record<string, string[]> = {}
+        repeatedStickers.forEach(sticker => {
+            if (!grouped[sticker.section]) {
+                grouped[sticker.section] = []
+            }
+            grouped[sticker.section].push(sticker.codeWithCount)
+        })
+
+        const lines = Object.values(grouped).map(codes => codes.join(', '))
+
+        const text = `Olha minhas repetidas do álbum ${baseAlbumName}:\n${lines.join('\n')}\n\nEstou utilizando o Troca Aí para gerenciar meu álbum: https://app.trocaai.net`
 
         navigator.clipboard.writeText(text)
             .then(() => alert('Lista de repetidas copiada para a área de transferência!'))
