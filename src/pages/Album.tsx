@@ -141,41 +141,47 @@ export default function Album() {
         }
     }
 
-    const handleShareRepeated = () => {
-        const repeatedStickers = Object.entries(userDistricts)
-            .filter(([_, count]) => count > 1)
-            .map(([numStr, count]) => {
-                const num = Number(numStr)
-                const meta = metadata.find(m => m.sticker_number === num)
-                const displayCode = meta ? meta.display_code.replace(' ', '') : num.toString()
-                const section = meta ? meta.section : 'Outros'
-                return {
-                    num,
-                    codeWithCount: `${displayCode}(${count - 1})`,
-                    section
-                }
-            })
-            .sort((a, b) => a.num - b.num)
+    const handleShare = () => {
+        let title = ''
+        let listToShare: { displayCode: string; section: string; count?: number }[] = []
 
-        if (repeatedStickers.length === 0) {
-            alert('Você não tem figurinhas repetidas neste álbum para compartilhar.')
+        if (filter === 'missing') {
+            title = `Olha as figurinhas que faltam no meu álbum ${baseAlbumName}:`
+            listToShare = metadata
+                .filter(s => (userDistricts[s.sticker_number] || 0) === 0)
+                .map(s => ({ displayCode: s.display_code, section: s.section }))
+        } else if (filter === 'repeated') {
+            title = `Olha minhas repetidas do álbum ${baseAlbumName}:`
+            listToShare = metadata
+                .filter(s => (userDistricts[s.sticker_number] || 0) > 1)
+                .map(s => ({
+                    displayCode: s.display_code,
+                    section: s.section,
+                    count: (userDistricts[s.sticker_number] || 0) - 1
+                }))
+        } else {
+            alert('Selecione o filtro "Faltam" ou "Repetidas" para compartilhar a lista correspondente.')
+            return
+        }
+
+        if (listToShare.length === 0) {
+            alert('Não há figurinhas para compartilhar com o filtro atual.')
             return
         }
 
         const grouped: Record<string, string[]> = {}
-        repeatedStickers.forEach(sticker => {
-            if (!grouped[sticker.section]) {
-                grouped[sticker.section] = []
-            }
-            grouped[sticker.section].push(sticker.codeWithCount)
+        listToShare.forEach(item => {
+            const code = item.displayCode.replace(' ', '')
+            const formatted = item.count ? `${code}(${item.count})` : code
+            if (!grouped[item.section]) grouped[item.section] = []
+            grouped[item.section].push(formatted)
         })
 
         const lines = Object.values(grouped).map(codes => codes.join(', '))
-
-        const text = `Olha minhas repetidas do álbum ${baseAlbumName}:\n${lines.join('\n')}\n\nEstou utilizando o Troca Aí para gerenciar meu álbum: https://app.trocaai.net`
+        const text = `${title}\n${lines.join('\n')}\n\nEstou utilizando o Troca Aí para gerenciar meu álbum: https://app.trocaai.net`
 
         navigator.clipboard.writeText(text)
-            .then(() => alert('Lista de repetidas copiada para a área de transferência!'))
+            .then(() => alert(`Lista de figurinhas ${filter === 'missing' ? 'faltantes' : 'repetidas'} copiada para a área de transferência!`))
             .catch(() => alert('Erro ao copiar.'))
     }
 
@@ -356,10 +362,6 @@ export default function Album() {
                             {albumName}
                         </h1>
                     </div>
-                    <Button variant="ghost" onClick={handleShareRepeated} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2">
-                        <span className="hidden sm:inline text-sm font-medium">Compartilhar Repetidas</span>
-                        <Share2 className="h-4 w-4" />
-                    </Button>
                 </div>
 
                 <div className="flex gap-4 text-sm justify-between bg-white border p-3 rounded-lg shadow-sm">
@@ -410,6 +412,14 @@ export default function Album() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button
+                        variant="outline"
+                        onClick={handleShare}
+                        className="px-3 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        title={filter === 'missing' ? "Compartilhar Faltantes" : filter === 'repeated' ? "Compartilhar Repetidas" : "Compartilhar Lista"}
+                    >
+                        <Share2 size={18} />
+                    </Button>
                     <Button variant="outline" onClick={toggleAllSections} className="px-3" title={areAllExpanded ? "Recolher Tudo" : "Expandir Tudo"}>
                         {areAllExpanded ? <ChevronsUp size={18} /> : <ChevronsDown size={18} />}
                     </Button>
