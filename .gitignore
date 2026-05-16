@@ -34,3 +34,6 @@ dist-ssr
 # Script de banco de dados
 *.sql
 *.txt  
+
+# WhatsApp Bot Sessions
+whatsapp-bot/auth_info_baileys/
