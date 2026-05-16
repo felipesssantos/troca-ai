@@ -12,3 +12,14 @@ services:
     ports:
       - "3002:80"
     restart: always
+
+  bot:
+    image: ghcr.io/${GH_REPO}-bot:latest
+    container_name: troca-ai-bot
+    ports:
+      - "3003:3001"
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./auth_info_baileys:/usr/src/app/auth_info_baileys

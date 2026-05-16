@@ -1,8 +1,11 @@
-name: Deploy to VPS
+name: Deploy Bot to VPS
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'whatsapp-bot/**'
+      - '.github/workflows/deploy-bot.yml'
 
 env:
   REGISTRY: ghcr.io
@@ -30,28 +33,12 @@ jobs:
         run: |
           echo "REPO_LOWER=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}
-          tags: |
-            type=raw,value=latest
-            type=sha
-
-      - name: Build and push Docker image
+      - name: Build and push Bot Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./whatsapp-bot
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-            VITE_MINIO_ENDPOINT=${{ secrets.VITE_MINIO_ENDPOINT }}
-            VITE_MINIO_ACCESS_KEY=${{ secrets.VITE_MINIO_ACCESS_KEY }}
-            VITE_MINIO_SECRET_KEY=${{ secrets.VITE_MINIO_SECRET_KEY }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_LOWER }}-bot:latest
 
   deploy:
     needs: build-and-push
@@ -87,16 +74,19 @@ jobs:
             echo "VITE_MINIO_ENDPOINT=${{ secrets.VITE_MINIO_ENDPOINT }}" >> .env
             echo "VITE_MINIO_ACCESS_KEY=${{ secrets.VITE_MINIO_ACCESS_KEY }}" >> .env
             echo "VITE_MINIO_SECRET_KEY=${{ secrets.VITE_MINIO_SECRET_KEY }}" >> .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> .env
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env
             
             REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
             echo "GH_REPO=$REPO_LOWER" >> .env
 
-            # 4. Login to GHCR (required if the repository/package is private)
+            # 4. Login to GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # 5. Pull the latest image and start via docker-compose (declarative)
-            docker-compose pull
-            docker-compose up -d
+            # 5. Pull the latest image and start ONLY the bot via docker-compose
+            docker-compose pull bot
+            docker-compose up -d bot
 
             # 6. Cleanup old images
             docker image prune -af
