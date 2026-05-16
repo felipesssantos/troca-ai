@@ -17,6 +17,9 @@ interface StickerData {
     count: number
 }
 
+const normalizeText = (text: string) =>
+    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export default function Album() {
     const { user } = useAuthStore()
     const { albumId } = useParams()
@@ -206,17 +209,25 @@ export default function Album() {
             // Filter SECTIONS based on criteria
             const filteredSections = sectionOrder.filter(secTitle => {
                 const stickersInSec = sections[secTitle]
+                if (!searchTerm) return true;
 
-                // Search Filter
-                if (searchTerm && !secTitle.toLowerCase().includes(searchTerm.toLowerCase())) return false
+                const normalizedSearch = normalizeText(searchTerm).replace(/\s/g, '');
 
-                // Completed Filter (Show ONLY sections where user has ALL stickers)
-                if (filter === 'completed') {
-                    const isComplete = stickersInSec.every(s => (userDistricts[s.sticker_number] || 0) > 0)
-                    return isComplete
+                // 1. Match section title (includes team name)
+                if (normalizeText(secTitle).includes(normalizeText(searchTerm))) return true;
+
+                // 2. Match abbreviation (extracted from first sticker)
+                const firstSticker = stickersInSec[0];
+                if (firstSticker) {
+                    const abbreviation = firstSticker.display_code.split(' ')[0];
+                    if (normalizeText(abbreviation).includes(normalizeText(searchTerm))) return true;
                 }
 
-                return true
+                // 3. Match sticker codes within this section (e.g., "BRA1")
+                return stickersInSec.some(s => {
+                    const normalizedCode = normalizeText(s.display_code).replace(/\s/g, '');
+                    return normalizedCode.includes(normalizedSearch);
+                });
             })
 
             if (filteredSections.length === 0) {
@@ -233,6 +244,16 @@ export default function Album() {
                 <div className="space-y-4">
                     {filteredSections.map(secTitle => {
                         const stickersInSec = sections[secTitle]
+                        let displayTitle = secTitle;
+
+                        // Add abbreviation to title if it's a team section (e.g., "Grupo A - México (MEX)")
+                        const firstSticker = stickersInSec[0];
+                        if (firstSticker && secTitle.includes(' - ')) {
+                            const abbreviation = firstSticker.display_code.split(' ')[0];
+                            if (abbreviation && !secTitle.includes(`(${abbreviation})`)) {
+                                displayTitle = `${secTitle} (${abbreviation})`;
+                            }
+                        }
 
                         // Filter ITEMS within section (for non-completed filters)
                         const visibleStickers = stickersInSec.filter(s => {
@@ -256,7 +277,7 @@ export default function Album() {
                                 >
                                     <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
                                         {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                                        {secTitle}
+                                        {displayTitle}
                                         {filter === 'completed' && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Completa! ✅</span>}
                                         <span className="text-xs font-normal text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
                                             {visibleStickers.length}
