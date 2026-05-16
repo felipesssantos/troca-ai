@@ -209,25 +209,33 @@ export default function Album() {
             // Filter SECTIONS based on criteria
             const filteredSections = sectionOrder.filter(secTitle => {
                 const stickersInSec = sections[secTitle]
-                if (!searchTerm) return true;
 
-                const normalizedSearch = normalizeText(searchTerm).replace(/\s/g, '');
+                // 1. Search Filter Logic
+                let matchesSearch = true;
+                if (searchTerm) {
+                    const normalizedSearch = normalizeText(searchTerm).replace(/\s/g, '');
+                    const sectionMatches = normalizeText(secTitle).includes(normalizeText(searchTerm));
 
-                // 1. Match section title (includes team name)
-                if (normalizeText(secTitle).includes(normalizeText(searchTerm))) return true;
+                    const firstSticker = stickersInSec[0];
+                    const abbrMatches = firstSticker && normalizeText(firstSticker.display_code.split(' ')[0]).includes(normalizeText(searchTerm));
 
-                // 2. Match abbreviation (extracted from first sticker)
-                const firstSticker = stickersInSec[0];
-                if (firstSticker) {
-                    const abbreviation = firstSticker.display_code.split(' ')[0];
-                    if (normalizeText(abbreviation).includes(normalizeText(searchTerm))) return true;
+                    const stickerMatches = stickersInSec.some(s => {
+                        const normalizedCode = normalizeText(s.display_code).replace(/\s/g, '');
+                        return normalizedCode.includes(normalizedSearch);
+                    });
+
+                    matchesSearch = sectionMatches || abbrMatches || stickerMatches;
                 }
 
-                // 3. Match sticker codes within this section (e.g., "BRA1")
-                return stickersInSec.some(s => {
-                    const normalizedCode = normalizeText(s.display_code).replace(/\s/g, '');
-                    return normalizedCode.includes(normalizedSearch);
-                });
+                if (!matchesSearch) return false;
+
+                // 2. Completed Filter Logic (Show ONLY sections where user has ALL stickers)
+                if (filter === 'completed') {
+                    const isComplete = stickersInSec.every(s => (userDistricts[s.sticker_number] || 0) > 0)
+                    return isComplete
+                }
+
+                return true
             })
 
             if (filteredSections.length === 0) {
