@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Users, BookOpen, LogOut, Menu } from 'lucide-react'
+import { LayoutDashboard, Users, BookOpen, LogOut, Menu, MessageSquare } from 'lucide-react'
 
 function SidebarContent({ className, ...props }: ComponentProps<"div">) {
     const navigate = useNavigate()
@@ -34,6 +34,11 @@ function SidebarContent({ className, ...props }: ComponentProps<"div">) {
                 <Link to="/admin/users">
                     <Button variant={isActive('/admin/users') ? 'secondary' : 'ghost'} className={`w-full justify-start hover:text-[#004d25] hover:bg-white/90 ${isActive('/admin/users') ? 'text-[#004d25]' : 'text-white'}`}>
                         <Users className="mr-2 h-4 w-4" /> Usuários
+                    </Button>
+                </Link>
+                <Link to="/admin/whatsapp">
+                    <Button variant={isActive('/admin/whatsapp') ? 'secondary' : 'ghost'} className={`w-full justify-start hover:text-[#004d25] hover:bg-white/90 ${isActive('/admin/whatsapp') ? 'text-[#004d25]' : 'text-white'}`}>
+                        <MessageSquare className="mr-2 h-4 w-4" /> Bot WhatsApp
                     </Button>
                 </Link>
             </nav>

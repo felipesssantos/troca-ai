@@ -139,8 +139,10 @@ export async function processStickers(userId, userAlbumId, albumTemplateId, code
     });
 
     // 3. Prepare upsert operations
-    const upserts = [];
+    const upsertsMap = {};
     const notOwned = [];
+    const addedNew = [];
+    const addedRepeated = [];
     
     for (const sticker of validStickers) {
         let currentCount = currentMap[sticker.sticker_number] || 0;
@@ -150,14 +152,29 @@ export async function processStickers(userId, userAlbumId, albumTemplateId, code
         } else {
             let newCount = isAdding ? currentCount + 1 : currentCount - 1;
             
-            upserts.push({
-                user_id: userId,
-                user_album_id: userAlbumId,
-                sticker_number: sticker.sticker_number,
-                count: newCount
-            });
+            // Atualiza o mapa na memória para a próxima iteração do loop
+            // Isso previne o bug de considerar a mesma figurinha como "Nova" duas vezes
+            currentMap[sticker.sticker_number] = newCount; 
+            
+            if (isAdding) {
+                if (currentCount === 0) {
+                    addedNew.push(sticker.display_code);
+                } else {
+                    addedRepeated.push(sticker.display_code);
+                }
+            }
+
+            // Grava o último valor atualizado para o upsert no banco
+            upsertsMap[sticker.sticker_number] = newCount;
         }
     }
+
+    const upserts = Object.keys(upsertsMap).map(stickerNum => ({
+        user_id: userId,
+        user_album_id: userAlbumId,
+        sticker_number: parseInt(stickerNum),
+        count: upsertsMap[stickerNum]
+    }));
 
     // 4. Upsert to database
     if (upserts.length > 0) {
@@ -172,6 +189,8 @@ export async function processStickers(userId, userAlbumId, albumTemplateId, code
         success: true, 
         processed: upserts.length, 
         notFound,
-        notOwned
+        notOwned,
+        addedNew,
+        addedRepeated
     };
 }

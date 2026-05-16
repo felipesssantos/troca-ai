@@ -1,9 +1,49 @@
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } from '@whiskeysockets/baileys';
 import pino from 'pino';
-import qrcode from 'qrcode-terminal';
+import qrcodeTerminal from 'qrcode-terminal';
+import qrcodeImage from 'qrcode';
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
 import { getUserByPhone, getUserByProfilePhone, getUserAlbums, processStickers, linkWhatsAppNumber } from './db.js';
 import { sessionManager, States } from './sessionManager.js';
 import { identifyStickersFromImage } from './gemini.js';
+
+let botState = {
+    status: 'DISCONNECTED',
+    qr: null
+};
+
+// Express App Setup
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.get('/api/whatsapp/status', (req, res) => {
+    res.json(botState);
+});
+
+let globalSock = null;
+
+app.post('/api/whatsapp/logout', async (req, res) => {
+    try {
+        if (globalSock) {
+            await globalSock.logout();
+        } else if (fs.existsSync('./auth_info_baileys')) {
+            fs.rmSync('./auth_info_baileys', { recursive: true, force: true });
+            connectToWhatsApp();
+        }
+        botState = { status: 'DISCONNECTED', qr: null };
+        res.json({ success: true, message: 'Disconnected. Restarting bot...' });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`[Express] API listening on port ${PORT}`);
+});
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -14,21 +54,35 @@ async function connectToWhatsApp() {
         logger: pino({ level: 'silent' })
     });
 
+    globalSock = sock;
+
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            qrcode.generate(qr, { small: true });
+            // qrcodeTerminal.generate(qr, { small: true }); // Removed from terminal
+
+            qrcodeImage.toDataURL(qr, (err, url) => {
+                if (!err) {
+                    botState = { status: 'QR_READY', qr: url };
+                }
+            });
         }
 
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
-            if (shouldReconnect) {
-                connectToWhatsApp();
-            }
+            
+            botState.status = 'DISCONNECTED';
+            botState.qr = null;
+            
+            // Reconnect regardless if it's logged out or network error
+            // If it was logged out, Baileys already deleted the creds, so it will generate a new QR
+            connectToWhatsApp();
+            
         } else if (connection === 'open') {
             console.log('Bot is ready and connected to WhatsApp!');
+            botState = { status: 'CONNECTED', qr: null };
         }
     });
 
@@ -166,7 +220,7 @@ async function connectToWhatsApp() {
                     sessionManager.updateState(phone, States.AWAITING_PHOTO, { isAdding });
                     await reply(`Perfeito! Vamos *${isAdding ? 'ADICIONAR' : 'REMOVER'}* figurinhas.\n\n📸 Agora me envie a *foto* das figurinhas.\nVocê pode colocar várias na mesma foto e me mandar!\n\n(Ou digite 'voltar' para escolher outra ação)`);
                 } else {
-                    await reply("Opção inválida. Responda 1 para Adicionar, 2 para Retirar, ou 'voltar'.");
+                    await reply("Opção inválida. Responda 1 para Adicionar, 2 para Retirar, 'voltar' ou 'sair'.");
                 }
                 return;
             }
@@ -231,6 +285,16 @@ async function connectToWhatsApp() {
 
                     if (result.success) {
                         let finalMessage = `✅ Tudo pronto! O álbum foi atualizado com sucesso.`;
+                        
+                        if (isAdding) {
+                            if (result.addedNew && result.addedNew.length > 0) {
+                                finalMessage += `\n✨ *Novas* (${result.addedNew.length}): ${result.addedNew.join(', ')}`;
+                            }
+                            if (result.addedRepeated && result.addedRepeated.length > 0) {
+                                finalMessage += `\n🔁 *Repetidas* (${result.addedRepeated.length}): ${result.addedRepeated.join(', ')}`;
+                            }
+                        }
+
                         if (result.notFound && result.notFound.length > 0) {
                             finalMessage += `\n\n⚠️ Atenção: Alguns códigos não foram encontrados neste álbum: ${result.notFound.join(', ')}`;
                         }

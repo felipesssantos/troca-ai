@@ -29,6 +29,7 @@ import AdminAlbums from './pages/admin/AdminAlbums'
 import AdminAlbumForm from './pages/admin/AdminAlbumForm'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminRequests from './pages/admin/AdminRequests'
+import AdminWhatsApp from './pages/admin/AdminWhatsApp'
 
 import PublicLayout from './layouts/PublicLayout'
 
@@ -150,6 +151,7 @@ function App() {
             <Route path="albums/edit/:id" element={<AdminAlbumForm />} />
             <Route path="requests" element={<AdminRequests />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="whatsapp" element={<AdminWhatsApp />} />
           </Route>
         </Route>
 
