@@ -5,7 +5,7 @@ import qrcodeImage from 'qrcode';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
-import { getUserByPhone, getUserByProfilePhone, getUserAlbums, processStickers, linkWhatsAppNumber } from './db.js';
+import { getUserByPhone, getUserByProfilePhone, getUserAlbums, processStickers, linkWhatsAppNumber, consultMissingStickers } from './db.js';
 import { sessionManager, States } from './sessionManager.js';
 import { identifyStickersFromImage } from './gemini.js';
 
@@ -190,7 +190,7 @@ async function connectToWhatsApp() {
                 }
 
                 sessionManager.updateState(phone, States.AWAITING_ACTION, { selectedAlbum });
-                await reply(`Álbum selecionado: *${selectedAlbum.albums.name}*\n\nO que você deseja fazer?\n\n1 - ➕ Colar figurinhas (Adicionar)\n2 - ➖ Retirar figurinhas (Subtrair)\n\nResponda com 1 ou 2.`);
+                await reply(`Álbum selecionado: *${selectedAlbum.albums.name}*\n\nO que você deseja fazer?\n\n1 - ➕ Colar figurinhas (Adicionar)\n2 - ➖ Retirar figurinhas (Subtrair)\n3 - 🔍 Consultar figurinhas (Ver o que falta)\n\nResponda com 1, 2 ou 3.`);
                 return;
             }
 
@@ -215,12 +215,20 @@ async function connectToWhatsApp() {
                     return;
                 }
 
-                if (textMessage === '1' || textMessage === '2') {
-                    const isAdding = textMessage === '1';
-                    sessionManager.updateState(phone, States.AWAITING_PHOTO, { isAdding });
-                    await reply(`Perfeito! Vamos *${isAdding ? 'ADICIONAR' : 'REMOVER'}* figurinhas.\n\n📸 Agora me envie a *foto* das figurinhas.\nVocê pode colocar várias na mesma foto e me mandar!\n\n(Ou digite 'voltar' para escolher outra ação)`);
+                if (textMessage === '1' || textMessage === '2' || textMessage === '3') {
+                    let actionType = 'ADD';
+                    let actionLabel = 'ADICIONAR';
+                    if (textMessage === '2') {
+                        actionType = 'REMOVE';
+                        actionLabel = 'REMOVER';
+                    } else if (textMessage === '3') {
+                        actionType = 'CONSULT';
+                        actionLabel = 'CONSULTAR';
+                    }
+                    sessionManager.updateState(phone, States.AWAITING_PHOTO, { actionType });
+                    await reply(`Perfeito! Vamos *${actionLabel}* figurinhas.\n\n📸 Agora me envie a *foto* das figurinhas.\nVocê pode colocar várias na mesma foto e me mandar!\n\n(Ou digite 'voltar' para escolher outra ação)`);
                 } else {
-                    await reply("Opção inválida. Responda 1 para Adicionar, 2 para Retirar, 'voltar' ou 'sair'.");
+                    await reply("Opção inválida. Responda 1 para Adicionar, 2 para Retirar, 3 para Consultar, 'voltar' ou 'sair'.");
                 }
                 return;
             }
@@ -235,7 +243,7 @@ async function connectToWhatsApp() {
                     }
                     if (textMessage.toLowerCase() === 'cancelar' || textMessage.toLowerCase() === 'voltar') {
                         sessionManager.updateState(phone, States.AWAITING_ACTION);
-                        await reply(`Álbum selecionado: *${session.data.selectedAlbum.albums.name}*\n\nO que você deseja fazer?\n1 - ➕ Colar figurinhas (Adicionar)\n2 - ➖ Retirar figurinhas (Subtrair)\n\n(Ou digite 'voltar' para trocar de álbum)`);
+                        await reply(`Álbum selecionado: *${session.data.selectedAlbum.albums.name}*\n\nO que você deseja fazer?\n1 - ➕ Colar figurinhas (Adicionar)\n2 - ➖ Retirar figurinhas (Subtrair)\n3 - 🔍 Consultar figurinhas (Ver o que falta)\n\n(Ou digite 'voltar' para trocar de álbum)`);
                         return;
                     }
                     await reply("Por favor, envie uma foto das figurinhas. Ou digite 'voltar' para trocar a ação.");
@@ -267,6 +275,29 @@ async function connectToWhatsApp() {
 
                 const codesStr = codes.join(', ');
 
+                if (session.data.actionType === 'CONSULT') {
+                    // Consult mode: tell them right away, don't ask for confirmation
+                    const { user, selectedAlbum } = session.data;
+                    const result = await consultMissingStickers(user.id, selectedAlbum.id, selectedAlbum.album_template_id, codes);
+
+                    let finalMessage = `🔎 **Resultado da Consulta**\nLidas na foto: ${codesStr}`;
+                    
+                    if (result.missing && result.missing.length > 0) {
+                        finalMessage += `\n\n✨ **VOCÊ AINDA NÃO TEM (${result.missing.length})**:\n${result.missing.join(', ')}`;
+                    } else {
+                        finalMessage += `\n\n✅ **Você já tem todas as figurinhas dessa foto no seu álbum!**`;
+                    }
+
+                    if (result.notFound && result.notFound.length > 0) {
+                        finalMessage += `\n\n⚠️ Atenção: Códigos não identificados neste álbum: ${result.notFound.join(', ')}`;
+                    }
+
+                    finalMessage += `\n\nMande outra foto para continuar consultando. (Ou digite 'voltar' para escolher outra ação, ou 'sair' para encerrar)`;
+
+                    await reply(finalMessage);
+                    return; // Stays in AWAITING_PHOTO
+                }
+
                 // Save codes in session and ask for confirmation
                 sessionManager.updateState(phone, States.AWAITING_STICKER_CONFIRMATION, { identifiedCodes: codes });
 
@@ -280,7 +311,8 @@ async function connectToWhatsApp() {
                     await reply("Atualizando seu álbum no banco de dados...");
 
                     // Update DB
-                    const { user, selectedAlbum, isAdding, identifiedCodes } = session.data;
+                    const { user, selectedAlbum, actionType, identifiedCodes } = session.data;
+                    const isAdding = actionType === 'ADD';
                     const result = await processStickers(user.id, selectedAlbum.id, selectedAlbum.album_template_id, identifiedCodes, isAdding);
 
                     if (result.success) {

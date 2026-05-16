@@ -194,3 +194,71 @@ export async function processStickers(userId, userAlbumId, albumTemplateId, code
         addedRepeated
     };
 }
+
+export async function consultMissingStickers(userId, userAlbumId, albumTemplateId, codesArray) {
+    const normalize = (c) => c.replace(/\s/g, '').toLowerCase();
+
+    const { data: metadata, error: metaError } = await supabase
+        .from('stickers')
+        .select('sticker_number, display_code')
+        .eq('album_id', albumTemplateId);
+
+    if (metaError) throw metaError;
+
+    const validStickers = [];
+    const notFound = [];
+
+    for (const code of codesArray) {
+        const normalizedInput = normalize(code);
+        const match = metadata.find(m => normalize(m.display_code) === normalizedInput);
+        if (match) {
+            validStickers.push(match);
+        } else {
+            notFound.push(code);
+        }
+    }
+
+    if (validStickers.length === 0) {
+        return { success: true, missing: [], notFound, alreadyOwned: [] };
+    }
+
+    const validStickerNumbers = validStickers.map(s => s.sticker_number);
+    const { data: currentDistricts, error: distError } = await supabase
+        .from('user_stickers')
+        .select('sticker_number, count')
+        .eq('user_id', userId)
+        .eq('user_album_id', userAlbumId)
+        .in('sticker_number', validStickerNumbers);
+
+    if (distError) throw distError;
+
+    const currentMap = {};
+    currentDistricts?.forEach(d => {
+        currentMap[d.sticker_number] = d.count;
+    });
+
+    const missing = [];
+    const alreadyOwned = [];
+
+    for (const sticker of validStickers) {
+        let currentCount = currentMap[sticker.sticker_number] || 0;
+        
+        if (currentCount === 0) {
+            // Deduplicate if the same sticker is sent twice in the photo
+            if (!missing.includes(sticker.display_code)) {
+                missing.push(sticker.display_code);
+            }
+        } else {
+            if (!alreadyOwned.includes(sticker.display_code)) {
+                alreadyOwned.push(sticker.display_code);
+            }
+        }
+    }
+
+    return {
+        success: true,
+        missing,
+        alreadyOwned,
+        notFound
+    };
+}
