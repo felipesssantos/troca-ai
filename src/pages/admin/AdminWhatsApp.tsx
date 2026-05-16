@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { QrCode, Smartphone, RefreshCw, PowerOff, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Smartphone, RefreshCw, PowerOff, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 interface BotStatus {
     status: 'DISCONNECTED' | 'QR_READY' | 'CONNECTED';
