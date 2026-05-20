@@ -181,6 +181,12 @@ async function connectToWhatsApp() {
 
             // -- STATE: AWAITING_ALBUM_CHOICE --
             if (session.state === States.AWAITING_ALBUM_CHOICE) {
+                if (textMessage.toLowerCase() === 'sair' || textMessage.toLowerCase() === 'cancelar' || textMessage.toLowerCase() === 'voltar') {
+                    sessionManager.clearSession(phone);
+                    await reply("Sessão encerrada. Quando precisar, é só me mandar um 'Oi' novamente!");
+                    return;
+                }
+
                 const choice = parseInt(textMessage) - 1;
                 const selectedAlbum = session.data.albums[choice];
 
@@ -345,6 +351,9 @@ async function connectToWhatsApp() {
                 } else if (textMessage === '2' || textMessage.toLowerCase() === 'nao' || textMessage.toLowerCase() === 'não' || textMessage.toLowerCase() === 'cancelar' || textMessage.toLowerCase() === 'voltar') {
                     sessionManager.updateState(phone, States.AWAITING_PHOTO);
                     await reply("Tudo bem! A leitura foi descartada.\n\nPode me enviar outra foto (tente evitar reflexos e focar bem nas letras e números), digite 'voltar' para trocar a ação, ou 'sair' para encerrar.");
+                } else if (textMessage.toLowerCase() === 'sair') {
+                    sessionManager.clearSession(phone);
+                    await reply("Sessão encerrada. Me mande um 'Oi' quando quiser recomeçar.");
                 } else {
                     await reply("Opção inválida. Responda 1 para confirmar as figurinhas, 2 para enviar outra foto, ou 'sair'.");
                 }
