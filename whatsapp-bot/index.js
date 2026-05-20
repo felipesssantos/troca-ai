@@ -281,14 +281,23 @@ async function connectToWhatsApp() {
                     // Send to Gemini
                     codes = await identifyStickersFromImage(buffer, imageMessage.mimetype);
                 } else {
-                    // Extract codes from text
-                    codes = textMessage.split(/[,;\n]+/).map(c => c.trim()).filter(c => c.length > 0);
+                    // Extract codes using regex to handle missing commas and spacing
+                    const matches = textMessage.match(/[A-Za-z]+\s*\d+|\d+|[A-Za-z]+/g);
+                    if (matches) {
+                        codes = matches;
+                    }
                 }
 
                 if (!codes || codes.length === 0) {
                     await reply("😕 Não consegui identificar nenhuma figurinha. Envie uma foto clara ou digite os códigos separados por vírgula.");
                     return;
                 }
+
+                // Standardize format (uppercase and space before number)
+                codes = codes.map(c => {
+                    let upper = c.toUpperCase().trim();
+                    return upper.replace(/^([A-Z]+)(\d+)$/, '$1 $2');
+                });
 
                 const codesStr = codes.join(', ');
 
@@ -309,7 +318,7 @@ async function connectToWhatsApp() {
                         finalMessage += `\n\n⚠️ Atenção: Códigos não identificados neste álbum: ${result.notFound.join(', ')}`;
                     }
 
-                    finalMessage += `\n\nMande outra foto para continuar consultando. (Ou digite 'voltar' para escolher outra ação, ou 'sair' para encerrar)`;
+                    finalMessage += `\n\nMande outra foto ou digite os códigos para continuar consultando. (Ou digite 'voltar' para escolher outra ação, ou 'sair' para encerrar)`;
 
                     await reply(finalMessage);
                     return; // Stays in AWAITING_PHOTO
@@ -350,18 +359,18 @@ async function connectToWhatsApp() {
                         if (result.notOwned && result.notOwned.length > 0) {
                             finalMessage += `\n\nℹ️ Nota: Algumas figurinhas não foram removidas pois você não tinha nenhuma delas: ${result.notOwned.join(', ')}`;
                         }
-                        finalMessage += `\n\nMande outra foto para continuar ${isAdding ? 'adicionando' : 'removendo'}. (Ou digite 'voltar' para escolher outra ação, ou 'sair' para encerrar)`;
+                        finalMessage += `\n\nMande outra foto ou digite os códigos para continuar ${isAdding ? 'adicionando' : 'removendo'}. (Ou digite 'voltar' para trocar a ação, ou 'sair' para encerrar)`;
 
                         // Go back to AWAITING_PHOTO to allow more uploads in the same session
                         sessionManager.updateState(phone, States.AWAITING_PHOTO);
                         await reply(finalMessage);
                     } else {
                         sessionManager.updateState(phone, States.AWAITING_PHOTO);
-                        await reply(`❌ Ocorreu um erro ao processar: Nenhuma das figurinhas identificadas pertence a este álbum.\nCódigos: ${result.notFound.join(', ')}\n\nEnvie outra foto se quiser continuar.`);
+                        await reply(`❌ Ocorreu um erro ao processar: Nenhuma das figurinhas identificadas pertence a este álbum.\nCódigos: ${result.notFound.join(', ')}\n\nEnvie outra foto ou digite os códigos se quiser continuar.`);
                     }
                 } else if (textMessage === '2' || textMessage.toLowerCase() === 'nao' || textMessage.toLowerCase() === 'não' || textMessage.toLowerCase() === 'cancelar' || textMessage.toLowerCase() === 'voltar') {
                     sessionManager.updateState(phone, States.AWAITING_PHOTO);
-                    await reply("Tudo bem! A leitura foi descartada.\n\nPode me enviar outra foto (tente evitar reflexos e focar bem nas letras e números), digite 'voltar' para trocar a ação, ou 'sair' para encerrar.");
+                    await reply("Tudo bem! A leitura foi descartada.\n\nPode me enviar outra foto ou digitar os códigos, digite 'voltar' para trocar a ação, ou 'sair' para encerrar.");
                 } else if (textMessage.toLowerCase() === 'sair') {
                     sessionManager.clearSession(phone);
                     await reply("Sessão encerrada. Me mande um 'Oi' quando quiser recomeçar.");
