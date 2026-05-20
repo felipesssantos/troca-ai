@@ -103,7 +103,13 @@ async function connectToWhatsApp() {
         const hasImage = !!(msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage);
 
         const session = sessionManager.getSession(phone);
-        const reply = async (text) => await sock.sendMessage(senderJid, { text });
+        const reply = async (text) => {
+            await sock.sendPresenceUpdate('composing', senderJid);
+            const typingTime = Math.floor(Math.random() * 1500) + 1000; // 1 to 2.5 seconds
+            await new Promise(resolve => setTimeout(resolve, typingTime));
+            await sock.sendPresenceUpdate('paused', senderJid);
+            await sock.sendMessage(senderJid, { text });
+        };
 
         console.log(`[${phone}] State: ${session.state} | Msg: ${textMessage || (hasImage ? '[Image]' : '')}`);
 
@@ -232,7 +238,7 @@ async function connectToWhatsApp() {
                         actionLabel = 'CONSULTAR';
                     }
                     sessionManager.updateState(phone, States.AWAITING_PHOTO, { actionType });
-                    await reply(`Perfeito! Vamos *${actionLabel}* figurinhas.\n\n📸 Agora me envie a *foto* das figurinhas.\nVocê pode colocar várias na mesma foto e me mandar!\n\n(Ou digite 'voltar' para escolher outra ação)`);
+                    await reply(`Perfeito! Vamos *${actionLabel}* figurinhas.\n\n📸 Me envie a *foto* das figurinhas (pode mandar várias na mesma foto).\n\n✍️ Ou se preferir, *digite os códigos* separados por vírgula (Ex: BRA 1, GER 2, ARG 10).\n\n(Ou digite 'voltar' para escolher outra ação)`);
                 } else {
                     await reply("Opção inválida. Responda 1 para Adicionar, 2 para Retirar, 3 para Consultar, 'voltar' ou 'sair'.");
                 }
@@ -252,30 +258,35 @@ async function connectToWhatsApp() {
                         await reply(`Álbum selecionado: *${session.data.selectedAlbum.albums.name}*\n\nO que você deseja fazer?\n1 - ➕ Colar figurinhas (Adicionar)\n2 - ➖ Retirar figurinhas (Subtrair)\n3 - 🔍 Consultar figurinhas (Ver o que falta)\n\n(Ou digite 'voltar' para trocar de álbum)`);
                         return;
                     }
-                    await reply("Por favor, envie uma foto das figurinhas. Ou digite 'voltar' para trocar a ação.");
-                    return;
                 }
 
-                await reply("🔎 Analisando a imagem... Aguarde um instante.");
+                let codes = [];
 
-                // Download image
-                const imageMessage = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
-                // create a temporary mock message object to pass to downloadMediaMessage
-                const mockMessage = {
-                    key: msg.key,
-                    message: msg.message.imageMessage ? msg.message : msg.message.extendedTextMessage?.contextInfo?.quotedMessage
-                };
+                if (hasImage) {
+                    await reply("🔎 Analisando a imagem... Aguarde um instante.");
 
-                const buffer = await downloadMediaMessage(mockMessage, 'buffer', {}, {
-                    logger: pino({ level: 'silent' }),
-                    reuploadRequest: sock.updateMediaMessage
-                });
+                    // Download image
+                    const imageMessage = msg.message.imageMessage || msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+                    // create a temporary mock message object to pass to downloadMediaMessage
+                    const mockMessage = {
+                        key: msg.key,
+                        message: msg.message.imageMessage ? msg.message : msg.message.extendedTextMessage?.contextInfo?.quotedMessage
+                    };
 
-                // Send to Gemini
-                const codes = await identifyStickersFromImage(buffer, imageMessage.mimetype);
+                    const buffer = await downloadMediaMessage(mockMessage, 'buffer', {}, {
+                        logger: pino({ level: 'silent' }),
+                        reuploadRequest: sock.updateMediaMessage
+                    });
+
+                    // Send to Gemini
+                    codes = await identifyStickersFromImage(buffer, imageMessage.mimetype);
+                } else {
+                    // Extract codes from text
+                    codes = textMessage.split(/[,;\n]+/).map(c => c.trim()).filter(c => c.length > 0);
+                }
 
                 if (!codes || codes.length === 0) {
-                    await reply("😕 Não consegui identificar nenhuma figurinha nesta foto. Tente tirar uma foto mais clara, focada e sem reflexos, e envie novamente.");
+                    await reply("😕 Não consegui identificar nenhuma figurinha. Envie uma foto clara ou digite os códigos separados por vírgula.");
                     return;
                 }
 
